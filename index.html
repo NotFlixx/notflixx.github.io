@@ -14,7 +14,8 @@
 
   <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
 
-  <script src="../cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+  <!-- Corrected Font Awesome script source -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
   <script src="../unpkg.com/typed.js%402.1.0/dist/typed.umd.js"></script>
   <script src="https://cdn.tailwindcss.com/"></script>
   <script>
@@ -112,7 +113,7 @@
         
         <div class="mb-8 text-xl md:text-2xl text-slate-300">
           <div class="typing-container mono">
-            <span id="typed-text"></span>
+            <span id="#typed-text"></span>
           </div>
         </div>
         
@@ -143,8 +144,8 @@
             <div class="absolute inset-0 rounded-2xl bg-slate-800 border border-white/10">
               <div class="h-full flex items-center justify-center">
                 <div class="text-center p-6">
-                  <div class="w-48 h-48 md:w-64 md:h-64 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 mx-auto mb-6 flex items-center justify-center text-5xl">
-                    <img src="imgs/flix.png" alt="Me", class="rounded-full w-48 h-48 md:w-64 md:h-64 ">
+                  <div class="w-48 h-48 md:w-64 md:h-64 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 mx-auto mb-6 flex items-center justify-center text-5xl overflow-hidden">
+                    <img src="flix.png" alt="Me" class="w-full h-full object-cover">
                   </div>
                   <h3 class="text-2xl font-bold mb-2">Flix</h3>
                   <p class="text-slate-400 mb-4">"If you can dream it, you can do it"</p>
