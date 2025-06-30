@@ -1,454 +1,309 @@
 <!DOCTYPE html>
-<html lang="en"> 
+<html lang="en" class="scroll-smooth">
 
-<!-- Mirrored from waike.dev/ by HTTrack Website Copier/3.x [XR&CO'2014], Mon, 19 May 2025 17:10:50 GMT -->
-<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Flix | notflixx.github.io</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flix | notflixx.github.io</title>
 
-  <meta content="notflixx.github.io" property="og:title" />
-  <meta content="Flix is the coolest person out there!" property="og:description" />
-  <meta content="#43B581" data-react-helmet="true" name="theme-color" />
+    <meta content="Flix's Portfolio" property="og:title" />
+    <meta content="A student developer navigating the digital world, deconstructing problems and building solutions with code." property="og:description" />
+    <meta content="#0a0a0a" data-react-helmet="true" name="theme-color" />
+    <link rel="shortcut icon" href="assets/favicon.ico" type="image/x-icon">
 
-  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-
-  <!-- Corrected Font Awesome script source -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
-  <script src="../unpkg.com/typed.js%402.1.0/dist/typed.umd.js"></script>
-  <script src="https://cdn.tailwindcss.com/"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          animation: {
-            'float': 'float 10s infinite ease-in-out',
-            'float-delay': 'float 10s infinite ease-in-out 3s',
-            'float-delay-2': 'float 10s infinite ease-in-out 6s',
-          },
-          keyframes: {
-            float: {
-              '0%, 100%': { transform: 'translateY(0) scale(1)' },
-              '50%': { transform: 'translateY(-20px) scale(1.05)' },
-            },
-            'blink-caret': {
-              'from, to': { borderColor: 'transparent' },
-              '50%': { borderColor: 'white' }
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap');
-
-    body {
-      font-family: 'Poppins', sans-serif;
-    }
-    .mono {
-      font-family: 'Space Mono', monospace;
-    }
-    .typing-text {
-      overflow: hidden;
-      border-right: .15em solid white;
-      white-space: nowrap;
-      margin: 0;
-      letter-spacing: .15em;
-      animation: 
-        typing 3.5s steps(40, end),
-        blink-caret .75s step-end infinite;
-    }
-    @keyframes typing {
-      from { width: 0 }
-      to { width: 100% }
-    }
-    @keyframes blink-caret {
-      from, to { border-color: transparent }
-      50% { border-color: white; }
-    }
-    .project-card:hover .project-overlay {
-      opacity: 1;
-    }
-  </style>
-</head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
-  <!-- Background -->
-  <div class="fixed inset-0 z-0 opacity-40 overflow-hidden pointer-events-none">
-    <div class="absolute w-[400px] h-[400px] top-[5%] left-[10%] rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 blur-[80px] animate-float"></div>
-    <div class="absolute w-[500px] h-[500px] top-[40%] right-[-5%] rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 blur-[80px] animate-float-delay"></div>
-    <div class="absolute w-[300px] h-[300px] bottom-[5%] left-[20%] rounded-full bg-gradient-to-r from-purple-600 to-pink-600 blur-[80px] animate-float-delay-2"></div>
-  </div>
-
-  <!-- Navbar -->
-  <nav class="fixed top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-white/10 px-6 py-4">
-    <div class="max-w-6xl mx-auto flex justify-between items-center">
-      <a href="#home" class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">notflixx.github.io</a>
-      <div class="hidden md:flex space-x-8">
-        <a href="#about" class="text-slate-300 hover:text-white transition-colors">About</a>
-        <a href="#skills" class="text-slate-300 hover:text-white transition-colors">Skills</a>
-        <a href="https://guns.lol/flixfqx" class="text-slate-300 hover:text-white transition-colors">Bio</a>
-      </div>
-      <button class="md:hidden text-slate-300 hover:text-white transition-colors">
-        <i class="fas fa-bars text-xl"></i>
-      </button>
-    </div>
-  </nav>
-
-
-  <main class="flex-grow">
-    <section id="home" class="relative min-h-screen flex items-center justify-center pt-16 pb-24 px-6">
-      <div class="max-w-6xl mx-auto text-center">
-        <div class="inline-block mb-4 px-4 py-2 rounded-full bg-indigo-900/30 border border-indigo-500/20">
-          <span class="text-indigo-300">
-            <i class="fas fa-code mr-2"></i>Student Developer
-          </span>
-        </div>
-        
-        <h1 class="text-4xl md:text-6xl font-bold mb-6">
-          Hi, I'm 
-          <span class="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Flix</span>
-        </h1>
-        
-        <div class="mb-8 text-xl md:text-2xl text-slate-300">
-          <div class="typing-container mono">
-            <span id="#typed-text"></span>
-          </div>
-        </div>
-        
-        <p class="max-w-2xl mx-auto mb-12 text-slate-400 text-lg">
-          Passionate about information and communication technology, 
-          building projects, and exploring the digital world.
-        </p>
-        
-        <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <a href="#about" class="text-slate-400 hover:text-white transition-colors">
-            <i class="fas fa-chevron-down"></i>
-          </a>
-        </div>
-      </div>
-    </section>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com/">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet">
     
-    <!-- About Section -->
-    <section id="about" class="py-24 px-6 bg-slate-800/30 backdrop-blur-md">
-      <div class="max-w-6xl mx-auto">
-        <div class="text-center mb-16">
-          <h2 class="text-3xl md:text-4xl font-bold mb-4">About Me</h2>
-          <div class="w-24 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 mx-auto"></div>
-        </div>
-        
-        <div class="flex flex-col md:flex-row gap-12 items-center">
-          <div class="w-full md:w-1/2 aspect-square relative">
-            <div class="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 blur-md opacity-50 -rotate-3"></div>
-            <div class="absolute inset-0 rounded-2xl bg-slate-800 border border-white/10">
-              <div class="h-full flex items-center justify-center">
-                <div class="text-center p-6">
-                  <div class="w-48 h-48 md:w-64 md:h-64 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 mx-auto mb-6 flex items-center justify-center text-5xl overflow-hidden">
-                    <img src="flix.png" alt="Me" class="w-full h-full object-cover">
-                  </div>
-                  <h3 class="text-2xl font-bold mb-2">Flix</h3>
-                  <p class="text-slate-400 mb-4">"If you can dream it, you can do it"</p>
-                  <div class="flex justify-center space-x-4">
-                    <a href="https://github.com/NotFlixx" class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center hover:bg-blue-600 transition-colors">
-                      <i class="fab fa-github"></i>
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="w-full md:w-1/2">
-            <div class="bg-slate-800/70 backdrop-blur-md rounded-2xl p-8 border border-white/10">
-              <h3 class="text-2xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                My Journey
-              </h3>
-              <p class="text-slate-300 mb-6">
-                Hey! I'm <span class="font-bold">Flix</span>. I'm a year 10 student with a deep passion and enjoyment for technology and coding. 
-                Ever since I was young, I was obsessed with computers and tech like programming and web development.
-              </p>
-              <p class="text-slate-300 mb-6">
-                My skills in technology is always expanding since i've started when I first learned to code simple programs.
-              </p>
-              
-              <div class="mt-8 grid grid-cols-2 gap-4">
-                <div class="bg-slate-900/50 rounded-lg p-4 border border-white/5">
-                  <h4 class="font-medium mb-2 text-indigo-300">Education</h4>
-                  <p class="text-slate-400">Year 10 Student</p>
-                </div>
-                <div class="bg-slate-900/50 rounded-lg p-4 border border-white/5">
-                  <h4 class="font-medium mb-2 text-indigo-300">Location</h4>
-                  <p class="text-slate-400">United Kingdom</p>
-                </div>
-                <div class="bg-slate-900/50 rounded-lg p-4 border border-white/5">
-                  <h4 class="font-medium mb-2 text-indigo-300">Languages</h4>
-                  <p class="text-slate-400">English, Spanish</p>
-                </div>
-                <div class="bg-slate-900/50 rounded-lg p-4 border border-white/5">
-                  <h4 class="font-medium mb-2 text-indigo-300">Studies</h4>
-                  <p class="text-slate-400">Computer Science, Spanish</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <script src="https://cdn.tailwindcss.com/"></script>
+    <script src="https://unpkg.com/typed.js@2.1.0/dist/typed.umd.js"></script>
     
-    <!-- Skills Section -->
-    <section id="skills" class="py-24 px-6">
-      <div class="max-w-6xl mx-auto">
-        <div class="text-center mb-16">
-          <h2 class="text-3xl md:text-4xl font-bold mb-4">My Skills</h2>
-          <div class="w-24 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 mx-auto"></div>
-          <p class="mt-6 text-slate-400 max-w-2xl mx-auto">
-            Here are some of the technologies and tools I've been learning and working with.
-          </p>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <!-- Skill Category 1 -->
-          <div class="bg-slate-800/70 backdrop-blur-md rounded-2xl p-6 border border-white/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/20">
-            <div class="w-12 h-12 rounded-lg bg-blue-900/30 flex items-center justify-center mb-4">
-              <i class="fas fa-code text-blue-400 text-xl"></i>
-            </div>
-            <h3 class="text-xl font-bold mb-4">Web Development</h3>
-            <div class="space-y-4">
-              <div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-slate-300">HTML</span>
-                  <span class="text-slate-400">30%</span>
-                </div>
-                <div class="w-full bg-slate-700 rounded-full h-2">
-                  <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full" style="width: 40%"></div>
-                </div>
-              </div>
-              <div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-slate-300">CSS</span>
-                  <span class="text-slate-400">24%</span>
-                </div>
-                <div class="w-full bg-slate-700 rounded-full h-2">
-                  <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full" style="width: 30%"></div>
-                </div>
-              </div>
-              <div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-slate-300">JavaScript</span>
-                  <span class="text-slate-400">5%</span>
-                </div>
-                <div class="w-full bg-slate-700 rounded-full h-2">
-                  <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full" style="width: 5%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Skill Category 2 -->
-          <div class="bg-slate-800/70 backdrop-blur-md rounded-2xl p-6 border border-white/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/20">
-            <div class="w-12 h-12 rounded-lg bg-indigo-900/30 flex items-center justify-center mb-4">
-              <i class="fas fa-laptop-code text-indigo-400 text-xl"></i>
-            </div>
-            <h3 class="text-xl font-bold mb-4">Programming</h3>
-            <div class="space-y-4">
-              <div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-slate-300">Python</span>
-                  <span class="text-slate-400">60%</span>
-                </div>
-                <div class="w-full bg-slate-700 rounded-full h-2">
-                  <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full" style="width: 55%"></div>
-                </div>
-              </div>
-              <div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-slate-300">Lua</span>
-                  <span class="text-slate-400">15%</span>
-                </div>
-                <div class="w-full bg-slate-700 rounded-full h-2">
-                  <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full" style="width: 20%"></div>
-                </div>
-              </div>
-              <div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-slate-300">Typescript</span>
-                  <span class="text-slate-400">3%</span>
-                </div>
-                <div class="w-full bg-slate-700 rounded-full h-2">
-                  <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full" style="width: 5%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Skill Category 3 -->
-          <div class="bg-slate-800/70 backdrop-blur-md rounded-2xl p-6 border border-white/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/20">
-            <div class="w-12 h-12 rounded-lg bg-cyan-900/30 flex items-center justify-center mb-4">
-              <i class="fas fa-tools text-cyan-400 text-xl"></i>
-            </div>
-            <h3 class="text-xl font-bold mb-4">Tools & Software</h3>
-            <div class="space-y-4">
-              <div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-slate-300">Git & GitHub</span>
-                  <span class="text-slate-400">55%</span>
-                </div>
-                <div class="w-full bg-slate-700 rounded-full h-2">
-                  <div class="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full" style="width: 35%"></div>
-                </div>
-              </div>
-              <div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-slate-300">VS Code</span>
-                  <span class="text-slate-400">40%</span>
-                </div>
-                <div class="w-full bg-slate-700 rounded-full h-2">
-                  <div class="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full" style="width: 40%"></div>
-                </div>
-              </div>
-              <div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-slate-300">Tailwind CSS</span>
-                  <span class="text-slate-400">1%</span>
-                </div>
-                <div class="w-full bg-slate-700 rounded-full h-2">
-                  <div class="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full" style="width: 20%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-  </main>
-    
-    <!-- Footer -->
-    <footer class="bg-slate-900 border-t border-white/10 py-12 px-6">
-      <div class="max-w-6xl mx-auto">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <!-- Column 1 -->
-          <div class="md:col-span-2">
-            <a href="#home" class="inline-block text-2xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-              notflixx.github.io
-            </a>
-            <p class="text-slate-400 mb-6 max-w-md">
-              Year 10 student with a passion for technology and programming, 
-              building the future one line of code at a time.
-            </p>
-            <div class="flex space-x-4">
-              <a href="https://github.com/NotFlixx" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 transition-colors">
-                <i class="fab fa-github"></i>
-              </a>
-              <a href="https://discord.com/users/1010775387099365396" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 transition-colors">
-                <i class="fab fa-discord"></i>
-              </a>
-            </div>
-          </div>
-          
-          <!-- Column 2 -->
-          <div>
-            <h3 class="text-lg font-bold mb-4">Quick Links</h3>
-            <ul class="space-y-2">
-              <li><a href="#home" class="text-slate-400 hover:text-white transition-colors">Home</a></li>
-              <li><a href="#about" class="text-slate-400 hover:text-white transition-colors">About</a></li>
-              <li><a href="#skills" class="text-slate-400 hover:text-white transition-colors">Skills</a></li>
-              <li><a href="https://guns.lol/flixfqx"text-slate-400 hover:text-white transition-colors">Bio</a></li>
-            </ul>
-          </div>
-          
-          <!-- Column 3 -->
-          <div>
-            <h3 class="text-lg font-bold mb-4">Contact</h3>
-            <ul class="space-y-2">
-              <li class="flex items-center text-slate-400">
-                <i class="fas fa-envelope mr-2 text-indigo-400"></i>
-                <span>notflixx538@gmail.com</span>
-              </li>
-              <li class="flex items-center text-slate-400">
-                <i class="fas fa-map-marker-alt mr-2 text-indigo-400"></i>
-                <span>United Kingdom</span>
-              </li>
-              <li class="flex items-center text-slate-400">
-                <i class="fas fa-graduation-cap mr-2 text-indigo-400"></i>
-                <span>Year 10 Student</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-        
-        <div class="mt-12 pt-8 border-t border-white/10 text-center text-slate-500">
-          <p class="mt-2 text-sm">Designed with  <i class="fas fa-heart text-red-500"></i>  by <span class="font-bold">Flix</span> using <span class="font-bold">Tailwind</span></p>
-        </div>
-      </div>
-    </footer>
-    
-    <!-- Back to Top Button -->
-    <a href="#home" class="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg z-50 opacity-0 invisible transition-all duration-300 hover:scale-110" id="backToTop">
-      <i class="fas fa-arrow-up"></i>
-    </a>
-    
-    <!-- JavaScript -->
-           <!-- JavaScript -->
     <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const backToTopBtn = document.getElementById('backToTop');
-        
-        window.addEventListener('scroll', function() {
-          if (window.pageYOffset > 300) {
-            backToTopBtn.classList.remove('opacity-0', 'invisible');
-            backToTopBtn.classList.add('opacity-100', 'visible');
-          } else {
-            backToTopBtn.classList.add('opacity-0', 'invisible');
-            backToTopBtn.classList.remove('opacity-100', 'visible');
-          }
-        });
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-green': '#39FF14',
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                        mono: ['Space Mono', 'monospace'],
+                    },
+                    animation: {
+                        glitch: 'glitch 0.5s linear infinite',
+                        'glitch-hover': 'glitch 0.5s linear infinite paused',
+                    },
+                    keyframes: {
+                        glitch: {
+                            '0%': { transform: 'translate(0)' },
+                            '20%': { transform: 'translate(-2px, 2px)' },
+                            '40%': { transform: 'translate(-2px, -2px)' },
+                            '60%': { transform: 'translate(2px, 2px)' },
+                            '80%': { transform: 'translate(2px, -2px)' },
+                            '100%': { transform: 'translate(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 
-      new Typed('#typed-text', {
-          strings: ['Technology Enthusiast', 'Beginner Programmer', 'Problem Solver'],
-          typeSpeed: 50,
-          backSpeed: 30,
-          backDelay: 3000,
-          startDelay: 250,
-          loop: true,
-      });
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const bypassRedirect = urlParams.get("tag") === "bypassredirect";
-        const isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-        if (!bypassRedirect && isMobile) {
-          window.location.href = "unsupported/index.html"; 
+    <style>
+        body {
+            font-family: 'Poppins', 'sans-serif';
+            background-color: #0A0A0A;
+            background-image: 
+                linear-gradient(rgba(57, 255, 20, 0.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(57, 255, 20, 0.07) 1px, transparent 1px);
+            background-size: 2rem 2rem;
+        }
+        .typed-cursor {
+            color: #39FF14; /* brand-green */
+        }
+        .glitch-text::before,
+        .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0A0A0A;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+        }
+        .glitch-text:hover::before {
+            left: 2px;
+            text-shadow: -1px 0 magenta;
+            animation: glitch 0.3s linear infinite alternate-reverse;
+        }
+        .glitch-text:hover::after {
+            left: -2px;
+            text-shadow: -1px 0 cyan;
+            animation: glitch 0.2s linear infinite reverse alternate-reverse;
         }
 
-        const scrollLeftBtn = document.getElementById('scrollLeft');
-        const scrollRightBtn = document.getElementById('scrollRight');
-        const projectContainer = document.querySelector('.flex.overflow-x-auto');
-        
-        scrollLeftBtn.addEventListener('click', function() {
-          projectContainer.scrollBy({ left: -340, behavior: 'smooth' });
-        });
-        
-        scrollRightBtn.addEventListener('click', function() {
-          projectContainer.scrollBy({ left: 340, behavior: 'smooth' });
-        });
-        
-        // Smooth scroll for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-          anchor.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            const targetId = this.getAttribute('href');
-            const targetElement = document.querySelector(targetId);
-            
-            if (targetElement) {
-              window.scrollTo({
-                top: targetElement.offsetTop - 80,
-                behavior: 'smooth'
-              });
+    </style>
+</head>
+
+<body class="text-slate-300 font-poppins">
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm border-b border-brand-green/20 px-6">
+        <div class="max-w-7xl mx-auto flex justify-between items-center h-20">
+            <a href="#home" data-text="NotFlixx" class="glitch-text relative text-2xl font-bold font-mono text-brand-green">
+                NotFlixx
+            </a>
+            <div class="hidden md:flex space-x-8 items-center">
+                <a href="#about" class="font-mono hover:text-brand-green transition-colors duration-300">/about</a>
+                <a href="#skills" class="font-mono hover:text-brand-green transition-colors duration-300">/skills</a>
+                <a href="https://guns.lol/flixfqx" target="_blank" class="px-4 py-2 text-sm font-mono rounded-none border-2 border-brand-green text-brand-green hover:bg-brand-green hover:text-black transition-all duration-300">
+                    Bio
+                </a>
+            </div>
+            <button id="mobile-menu-button" class="md:hidden text-brand-green z-50">
+                <i id="mobile-menu-icon" class="fas fa-bars text-2xl"></i>
+            </button>
+        </div>
+    </nav>
+    
+    <div id="mobile-menu" class="fixed inset-0 bg-black/95 backdrop-blur-lg z-40 hidden flex-col items-center justify-center space-y-8 text-2xl font-mono">
+        <a href="#about" class="mobile-menu-link hover:text-brand-green transition-colors duration-300">/about</a>
+        <a href="#skills" class="mobile-menu-link hover:text-brand-green transition-colors duration-300">/skills</a>
+        <a href="https://guns.lol/flixfqx" target="_blank" class="mobile-menu-link hover:text-brand-green transition-colors duration-300">/bio</a>
+    </div>
+
+    <main class="flex-grow z-10">
+        <section id="home" class="relative min-h-screen flex items-center justify-center pt-20 pb-24 px-6 overflow-hidden">
+            <div class="max-w-7xl mx-auto text-center">
+                <div class="inline-block mb-6 px-4 py-2 border border-brand-green/30">
+                    <p class="text-brand-green text-sm font-mono">
+                       >> STATUS: ONLINE
+                    </p>
+                </div>
+
+                <h1 class="text-4xl md:text-6xl lg:text-7xl font-mono font-bold mb-4 text-slate-100">
+                    Hi, I'm <span class="text-brand-green">Flix</span>
+                </h1>
+
+                <div class="mb-8 h-16 text-2xl md:text-3xl font-mono text-slate-300 flex items-center justify-center">
+                   <span id="typed-text-target"></span>
+                </div>
+
+                <p class="max-w-2xl mx-auto mb-12 text-slate-400 text-lg leading-relaxed">
+                    A student developer navigating the digital world, deconstructing complex problems and building effective solutions with code.
+                </p>
+
+                <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+                  <a href="#about" class="text-slate-500 hover:text-brand-green transition-colors text-2xl animate-pulse">
+                      <i class="fas fa-chevron-down"></i>
+                  </a>
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="py-24 px-6 bg-black/80 backdrop-blur-sm">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl md:text-4xl font-mono font-bold mb-4 text-brand-green">
+                        <span class="glitch-text" data-text="[ ABOUT_ME ]">[ ABOUT_ME ]</span>
+                    </h2>
+                </div>
+
+                <div class="flex flex-col md:flex-row gap-12 lg:gap-16 items-center">
+                    <div class="w-full md:w-2/5">
+                        <div class="relative border-2 border-brand-green/30 p-2">
+                           <div class="absolute -top-2 -left-2 w-4 h-4 border-l-2 border-t-2 border-brand-green"></div>
+                           <div class="absolute -top-2 -right-2 w-4 h-4 border-r-2 border-t-2 border-brand-green"></div>
+                           <div class="absolute -bottom-2 -left-2 w-4 h-4 border-l-2 border-b-2 border-brand-green"></div>
+                           <div class="absolute -bottom-2 -right-2 w-4 h-4 border-r-2 border-b-2 border-brand-green"></div>
+                           <img src="assets/flix.png" alt="A profile picture of Flix" class="w-full h-full object-cover transition-all duration-300">
+                        </div>
+                    </div>
+
+                    <div class="w-full md:w-3/5">
+                        <div class="border border-brand-green/30 p-8">
+                            <h3 class="text-2xl font-mono font-bold mb-4 text-slate-100">
+                               // My Mission
+                            </h3>
+                            <p class="text-slate-300 mb-4 leading-relaxed">
+                                I'm <span class="text-white">Flix</span>, a Year 10 student driven by the logic and structure of code. For me, programming is the ultimate puzzle. It's about breaking down large, complex systems into manageable components and then building them back up into something functional and efficient.
+                            </p>
+                            <p class="text-slate-300 mb-6 leading-relaxed">
+                                My journey is one of continuous learning. I'm always exploring new languages and frameworks, not just to build things, but to understand the fundamental principles that govern how they work. Every line of code is a step towards a solution.
+                            </p>
+                            <p class="font-mono text-brand-green mt-4">>> "Every line of code is a step towards a solution."</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="skills" class="py-24 px-6">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl md:text-4xl font-mono font-bold mb-4 text-brand-green">
+                        <span class="glitch-text" data-text="[ MY_STACK ]">[ MY_STACK ]</span>
+                    </h2>
+                     <p class="mt-6 text-slate-400 max-w-2xl mx-auto">
+                        A list of tools and languages I currently utilize for my projects. This arsenal is always expanding.
+                    </p>
+                </div>
+                
+                <div id="skills-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                   </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-black/80 backdrop-blur-sm border-t border-brand-green/20 py-12 px-6">
+        <div class="max-w-7xl mx-auto text-center">
+            <h3 class="font-mono text-2xl text-brand-green mb-4">Wanna chat?</h3>
+            <p class="text-slate-400 mb-6 max-w-md mx-auto">
+                Here are my socials:
+            </p>
+            <div class="flex justify-center space-x-6 mb-8">
+                <a href="https://github.com/NotFlixx" target="_blank" class="text-3xl text-slate-400 hover:text-brand-green transition-all duration-300 transform hover:scale-110">
+                    <i class="fab fa-github"></i>
+                </a>
+                <a href="https://discord.com/users/1269653817633538092" target="_blank" class="text-3xl text-slate-400 hover:text-indigo-400 transition-all duration-300 transform hover:scale-110">
+                    <i class="fab fa-discord"></i>
+                </a>
+            </div>
+
+            <div class="pt-8 border-t border-brand-green/10 text-slate-500 font-mono text-sm">
+                <p>Designed & Built by Flix</p>
+                <p class="mt-2">INITIATED [2024]</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // --- SKILLS DATA: Edit this array to easily update your skills ---
+            const skillsData = [{
+                category: "Web Development",
+                icon: "fas fa-code text-brand-green",
+                skills: [{ name: "HTML", proficiency: 40 }, { name: "CSS", proficiency: 30 }, { name: "JavaScript", proficiency: 15 }]
+            }, {
+                category: "Programming",
+                icon: "fas fa-cogs text-brand-green",
+                skills: [{ name: "Python", proficiency: 60 }, { name: "Lua", proficiency: 20 }, { name: "TypeScript", proficiency: 5 }]
+            }, {
+                category: "Tools & Software",
+                icon: "fas fa-terminal text-brand-green",
+                skills: [{ name: "Git & GitHub", proficiency: 55 }, { name: "VS Code", proficiency: 40 }, { name: "Tailwind CSS", proficiency: 25 }]
+            }];
+
+            function generateSkills() {
+                const skillsContainer = document.getElementById('skills-container');
+                if (!skillsContainer) return;
+                
+                let skillsHTML = '';
+                skillsData.forEach(category => {
+                    skillsHTML += `
+                        <div class="border border-brand-green/30 p-6 transition-all duration-300 hover:border-brand-green/80 hover:bg-brand-green/5">
+                            <div class="flex items-center gap-4 mb-6">
+                               <div class="text-2xl"><i class="${category.icon}"></i></div>
+                               <h3 class="text-xl font-mono font-bold text-slate-100">${category.category}</h3>
+                            </div>
+                            <div class="space-y-5">
+                    `;
+                    category.skills.forEach(skill => {
+                        skillsHTML += `
+                            <div>
+                                <div class="flex justify-between mb-1 font-mono text-sm">
+                                    <span class="text-slate-300">${skill.name}</span>
+                                    <span class="text-slate-400">${skill.proficiency}%</span>
+                                </div>
+                                <div class="w-full bg-brand-green/10 h-2 border border-brand-green/20">
+                                    <div class="bg-brand-green h-full" style="width: ${skill.proficiency}%"></div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    skillsHTML += `</div></div>`;
+                });
+                skillsContainer.innerHTML = skillsHTML;
             }
-          });
+
+            new Typed('#typed-text-target', {
+                strings: ['Architecting Solutions.', 'Deconstructing Problems.', 'Building with Code.', 'Navigating the Digital Matrix.'],
+                typeSpeed: 60,
+                backSpeed: 30,
+                backDelay: 2000,
+                startDelay: 500,
+                loop: true,
+                smartBackspace: true,
+            });
+
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const mobileMenuIcon = document.getElementById('mobile-menu-icon');
+            const mobileMenuLinks = document.querySelectorAll('.mobile-menu-link');
+
+            function toggleMenu() {
+              mobileMenu.classList.toggle('hidden');
+              mobileMenu.classList.toggle('flex');
+              mobileMenuIcon.classList.toggle('fa-bars');
+              mobileMenuIcon.classList.toggle('fa-times');
+            }
+            mobileMenuButton.addEventListener('click', toggleMenu);
+            mobileMenuLinks.forEach(link => link.addEventListener('click', () => !mobileMenu.classList.contains('hidden') && toggleMenu()));
+
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetElement = document.querySelector(this.getAttribute('href'));
+                    if (targetElement) {
+                        const navHeight = 80;
+                        window.scrollTo({ top: targetElement.offsetTop - navHeight, behavior: 'smooth' });
+                    }
+                });
+            });
+            
+            generateSkills();
         });
-      });
     </script>
-  </body>
-  
-<!-- Mirrored from waike.dev/ by HTTrack Website Copier/3.x [XR&CO'2014], Mon, 19 May 2025 17:11:12 GMT -->
+</body>
 </html>
