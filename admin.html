@@ -49,9 +49,47 @@
         </div>
         <button type="submit" class="btn full-width">Login</button>
         <p id="loginStatus" class="admin-status"></p>
+        <p style="text-align:center;margin-top:12px;font-size:13px;">
+          <a href="#" onclick="showForgotPassword();return false;" style="color:#a855f7;">Forgot password?</a>
+        </p>
       </form>
     </div>
   </div>
+
+  <!-- Forgot Password Modal -->
+  <div id="forgotPasswordModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;" class="">
+    <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);"></div>
+    <div style="position:relative;z-index:10000;display:flex;align-items:center;justify-content:center;min-height:100%;padding:20px;box-sizing:border-box;">
+      <div class="admin-card" style="max-width:360px;width:100%;box-shadow:0 25px 80px rgba(0,0,0,0.9);animation:fadeUp 0.3s ease;">
+        <h2 style="margin-bottom:16px;">Forgot Password</h2>
+        <p class="contact-sub">Enter the reset code to recover your account.</p>
+        <form id="forgotPasswordForm">
+          <div class="field" style="margin-bottom:16px;">
+            <label>Reset Code</label>
+            <input id="resetCode" type="text" placeholder="Enter code" required style="width:100%;padding:14px;border-radius:10px;border:1px solid rgba(0,200,255,0.2);background:rgba(0,20,40,0.9);color:white;font-size:16px;text-align:center;letter-spacing:6px;font-weight:bold;box-sizing:border-box;">
+          </div>
+          <div class="field" style="margin-bottom:16px;">
+            <label>Username</label>
+            <input id="resetUsername" type="text" placeholder="Username" required style="width:100%;padding:14px;border-radius:10px;border:1px solid rgba(0,200,255,0.2);background:rgba(0,20,40,0.9);color:white;font-size:14px;box-sizing:border-box;">
+          </div>
+          <div class="field" style="margin-bottom:20px;">
+            <label>New Password</label>
+            <input id="newPassword" type="password" placeholder="New password" required style="width:100%;padding:14px;border-radius:10px;border:1px solid rgba(0,200,255,0.2);background:rgba(0,20,40,0.9);color:white;font-size:14px;box-sizing:border-box;">
+          </div>
+          <button type="submit" class="btn full-width">Reset Password</button>
+        </form>
+        <button class="btn full-width btn-ghost" style="margin-top:12px;" onclick="closeForgotPassword()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @media (max-width: 480px) {
+      #forgotPasswordModal .admin-card { padding: 20px !important; }
+      #forgotPasswordModal input { font-size: 14px !important; padding: 12px !important; }
+      #forgotPasswordModal h2 { font-size: 20px !important; }
+    }
+  </style>
 
   <div id="messagesPanel" class="admin-messages" style="display:none;">
     <div class="admin-messages-header">
@@ -85,12 +123,12 @@
           <input id="currentPassword" type="password" autocomplete="off" required />
         </div>
         <div class="field">
-          <label for="newPassword">New password</label>
-          <input id="newPassword" type="password" autocomplete="off" required />
+          <label for="profileNewPassword">New password</label>
+          <input id="profileNewPassword" type="password" autocomplete="off" required />
         </div>
         <div class="field">
-          <label for="confirmPassword">Confirm new password</label>
-          <input id="confirmPassword" type="password" autocomplete="off" required />
+          <label for="profileConfirmPassword">Confirm new password</label>
+          <input id="profileConfirmPassword" type="password" autocomplete="off" required />
         </div>
         <button class="btn small-btn" type="submit">Change password</button>
       </form>
@@ -133,6 +171,22 @@
             </div>
           </form>
           <div id="usersList" class="users-list"></div>
+        </div>
+
+        <div class="invites-panel card">
+          <h3>Invite Links</h3>
+          <form id="createInviteForm" class="user-form">
+            <div class="user-create-row" style="display:flex; gap:6px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+              <select id="inviteRole" style="flex:1; min-width:120px;">
+                <option value="viewer">Viewer</option>
+                <option value="mod">Moderator</option>
+                <option value="admin">Admin</option>
+                <option value="owner">Owner</option>
+              </select>
+              <button class="btn" type="submit" style="flex:0 0 auto;">Generate Link</button>
+            </div>
+          </form>
+          <div id="invitesList" class="users-list"></div>
         </div>
 
         <div class="activity-panel card">
