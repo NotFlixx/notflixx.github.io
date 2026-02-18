@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Contact - NotFlixx</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Floating bubbles -->
+  <div class="bubbles">
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+  </div>
+
+<header>
+  <a href="index.html" class="logo">NotFlixx</a>
+  <nav>
+    <a href="about.html">About</a>
+    <a href="projects.html">Projects</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+</header>
+
+<div class="page">
+  <h1>Contact Me</h1>
+  <p>Let’s build something great together.</p>
+
+  <div class="contact-grid">
+    <div class="contact-card">
+      <h2>Send a Message</h2>
+      <p class="contact-sub">
+        Fill this out to send a message straight into your admin inbox (no email app will open).
+      </p>
+
+      <form class="contact-form">
+        <div class="field">
+          <label for="name">Your Name</label>
+          <input id="name" name="name" type="text" placeholder="Jane Doe" required>
+        </div>
+
+        <div class="field">
+          <label for="email">Your Email</label>
+          <input id="email" name="email" type="email" placeholder="you@example.com" required>
+        </div>
+
+        <div class="field">
+          <label for="subject">Subject</label>
+          <input id="subject" name="subject" type="text" placeholder="Let’s work together" required>
+        </div>
+
+        <div class="field">
+          <label for="message">Your Message</label>
+          <textarea id="message" name="message" rows="5" placeholder="Tell me about your idea..." required></textarea>
+        </div>
+
+        <button type="submit" class="btn full-width">Send Message</button>
+      </form>
+    </div>
+
+    <div class="contact-side">
+      <h2>Other Ways to Reach Me</h2>
+      <p class="contact-sub">
+        Prefer to reach out directly? Use the email below.
+      </p>
+
+      <div class="contact-highlight">
+        <span>Email</span>
+        <a href="mailto:notflixx538@gmail.com">notflixx538@gmail.com</a>
+      </div>
+
+      <div class="contact-meta">
+        <p><strong>Response time:</strong> usually within 24 hours</p>
+        <p><strong>Available for:</strong> web projects, UI work, and collabs</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  © 2026 <a href="admin.html" style="color: inherit; text-decoration: none;">NotFlixx</a>
+</footer>
+
+<script src="contact.js"></script>
+</body>
+</html>

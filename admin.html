@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin - NotFlixx</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Floating bubbles -->
+  <div class="bubbles">
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+  </div>
+
+<header>
+  <a href="index.html" class="logo">NotFlixx</a>
+  <nav>
+    <a href="about.html">About</a>
+    <a href="projects.html">Projects</a>
+    <a href="contact.html">Contact</a>
+    <a href="admin.html">Admin</a>
+  </nav>
+</header>
+
+<div class="page admin-page">
+  <h1>Admin Login</h1>
+  <p>Sign in to view contact messages.</p>
+
+  <div class="admin-grid">
+    <div class="admin-card" id="loginCard">
+      <h2>Sign in</h2>
+      <p class="contact-sub">
+        Enter your admin username and password.
+      </p>
+
+      <form id="loginForm" class="contact-form">
+        <div class="field">
+          <label for="login-username">Username</label>
+          <input id="login-username" name="username" type="text" autocomplete="off" required>
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input id="login-password" name="password" type="password" autocomplete="off" required>
+        </div>
+        <button type="submit" class="btn full-width">Login</button>
+        <p id="loginStatus" class="admin-status"></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="messagesPanel" class="admin-messages" style="display:none;">
+    <div class="admin-messages-header">
+        <div class="inbox-controls" style="display:flex; gap:12px; align-items:center;">
+        <div class="inbox-tabs" role="tablist">
+          <button class="tab active" data-view="inbox">Inbox <span class="tab-count" id="countInbox">0</span></button>
+          <button class="tab" data-view="pinned">Pinned <span class="tab-count" id="countPinned">0</span></button>
+          <button class="tab" data-view="archived">Archived <span class="tab-count" id="countArchived">0</span></button>
+          <button class="tab" data-view="trash">Trash <span class="tab-count" id="countTrash">0</span></button>
+          <button class="tab" data-view="all">All <span class="tab-count" id="countAll">0</span></button>
+        </div>
+      </div>
+
+      <div class="admin-userbox">
+        <div id="currentUserInfo" class="current-user">Not signed in</div>
+      </div>
+
+      <div class="inbox-actions">
+        <button id="clearMessages" class="btn small-btn">Clear Inbox</button>
+        <button id="contentBtn" class="btn small-btn">Content</button>
+      </div>
+    </div>
+
+    <div id="profilePanel" class="profile-panel">
+      <h3>Your profile</h3>
+      <p class="contact-sub" id="profileStatus">Update your password or avatar while logged in.</p>
+
+      <form id="passwordForm" class="user-form">
+        <div class="field">
+          <label for="currentPassword">Current password</label>
+          <input id="currentPassword" type="password" autocomplete="off" required />
+        </div>
+        <div class="field">
+          <label for="newPassword">New password</label>
+          <input id="newPassword" type="password" autocomplete="off" required />
+        </div>
+        <div class="field">
+          <label for="confirmPassword">Confirm new password</label>
+          <input id="confirmPassword" type="password" autocomplete="off" required />
+        </div>
+        <button class="btn small-btn" type="submit">Change password</button>
+      </form>
+
+      <form id="avatarForm" class="user-form" style="margin-top:16px;">
+        <div class="field">
+          <label for="avatarFile">Profile picture</label>
+          <input id="avatarFile" type="file" accept="image/*" />
+        </div>
+        <button class="btn small-btn" type="submit">Save picture</button>
+      </form>
+    </div>
+
+    <div id="adminTools" class="admin-tools">
+      <div class="analytics-cards">
+        <div class="analytic-card"><div class="analytic-number" id="statTotal">0</div><div class="analytic-label">Total</div></div>
+        <div class="analytic-card"><div class="analytic-number" id="statUnread">0</div><div class="analytic-label">Unread</div></div>
+        <div class="analytic-card"><div class="analytic-number" id="statPinned">0</div><div class="analytic-label">Pinned</div></div>
+        <div class="analytic-card"><div class="analytic-number" id="statArchived">0</div><div class="analytic-label">Archived</div></div>
+        <div class="analytic-card"><div class="analytic-number" id="statTrash">0</div><div class="analytic-label">Trash</div></div>
+      </div>
+
+      <div class="analytics-chart" id="statusChart"></div>
+
+      <div class="admin-tools-row">
+        <div class="users-panel card">
+          <h3>Users</h3>
+          <form id="createUserForm" class="user-form">
+            <div class="user-create-row" style="display:flex; gap:6px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+              <input id="newUsername" placeholder="username" style="flex:1; min-width:100px;" required />
+              <input id="newPassword" type="password" placeholder="password" style="flex:1; min-width:100px;" required />
+              <select id="newRole" style="flex:1; min-width:90px;">
+                <option value="viewer">Viewer</option>
+                <option value="mod">Moderator</option>
+                <option value="admin">Admin</option>
+                <option value="owner">Owner</option>
+              </select>
+
+              <button class="btn" type="submit" style="flex:0 0 auto;">Create</button>
+            </div>
+          </form>
+          <div id="usersList" class="users-list"></div>
+        </div>
+
+        <div class="activity-panel card">
+          <h3>Activity log</h3>
+          <div id="activityLog" class="activity-log"></div>
+          <div style="margin-top:10px;"><button id="clearActivity" class="btn btn-ghost">Clear activity</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="messagesList" class="messages-list">
+      <!-- Messages will be injected here -->
+    </div>
+  </div>
+
+  <div id="contentPanel" class="admin-messages" style="display:none;">
+    <div class="content-panel">
+      <div class="content-header">
+        <h2>Content Management</h2>
+        <button class="btn btn-ghost" onclick="setView('inbox')" style="margin-left: 20px;">← Back to Messages</button>
+      </div>
+
+      <div class="content-tabs">
+        <button class="tab-btn active" data-ctype="projects">Projects</button>
+        <button class="tab-btn" data-ctype="skills">Skills</button>
+        <button class="tab-btn" data-ctype="categories">Categories</button>
+      </div>
+
+      <div id="projectsContent" class="content-section">
+        <div class="content-form">
+          <h3>Add New Project</h3>
+          <form id="addProjectForm">
+            <div class="form-row" style="flex-wrap:wrap;">
+              <input id="projTitle" placeholder="Project title" style="flex:1 1 200px; min-width:150px;" required />
+              <select id="projCategory" style="flex:1 1 120px; min-width:100px;">
+                <option value="games">Games</option>
+                <option value="servers">Servers</option>
+                <option value="staff">Staff</option>
+              </select>
+            </div>
+            <textarea id="projDesc" placeholder="Description" rows="2" style="margin-bottom:8px;"></textarea>
+            <div class="form-row" style="flex-wrap:wrap;">
+              <input id="projTags" placeholder="Tags (comma separated)" style="flex:1 1 150px;" />
+              <input id="projLink" placeholder="Project link" style="flex:1 1 150px;" />
+            </div>
+            <div class="form-row" id="staffStatusRow" style="display: none; flex-wrap:wrap;">
+              <select id="projStaffStatus" style="flex:1 1 150px;">
+                <option value="">Staff Status (optional)</option>
+                <option value="active">Active</option>
+                <option value="demoted">Demoted</option>
+                <option value="quit">Quit</option>
+              </select>
+              <span style="font-size: 12px; opacity: 0.7; align-self: center;">Staff status</span>
+            </div>
+            <div class="form-row" style="flex-wrap:wrap;">
+              <input id="projBanner" type="file" accept="image/*" style="flex:1 1 200px;" />
+              <span style="font-size: 12px; opacity: 0.7; align-self: center;">Banner (optional)</span>
+            </div>
+            <button class="btn" type="submit">Add Project</button>
+          </form>
+        </div>
+        <h4 style="margin-bottom: 16px; color: rgba(255,255,255,0.7);">Existing Projects</h4>
+        <div id="projectsList" class="content-items"></div>
+      </div>
+
+      <div id="skillsContent" class="content-section" style="display:none;">
+        <div class="content-form">
+          <h3>Add New Skill</h3>
+          <form id="addSkillForm">
+            <div class="form-row">
+              <input id="skillName" placeholder="Skill name" required />
+              <input id="skillPercent" type="number" placeholder="Percentage %" min="0" max="100" required />
+            </div>
+            <button class="btn" type="submit">Add Skill</button>
+          </form>
+        </div>
+        <h4 style="margin-bottom: 16px; color: rgba(255,255,255,0.7);">Existing Skills</h4>
+        <div id="skillsList" class="content-items"></div>
+      </div>
+
+      <div id="categoriesContent" class="content-section" style="display:none;">
+        <div class="content-form">
+          <h3>Add New Category</h3>
+          <form id="addCategoryForm">
+            <input id="categoryName" placeholder="Category name (e.g. YouTube, Twitch)" required />
+            <button class="btn" type="submit">Add Category</button>
+          </form>
+        </div>
+        <h4 style="margin-bottom: 16px; color: rgba(255,255,255,0.7);">Existing Categories</h4>
+        <div id="categoriesList" class="content-items"></div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<footer>
+  © 2026 <a href="admin.html" style="color: inherit; text-decoration: none;">NotFlixx</a> — Admin
+</footer>
+
+<script src="admin.js"></script>
+</body>
+</html>
+
