@@ -8,6 +8,182 @@ const STORAGE_KEY_AVATARS = 'notflixx_avatars';
 const STORAGE_KEY_CONTENT = 'notflixx_content';
 const STORAGE_KEY_PROJECT_IMAGES = 'notflixx_project_images';
 const STORAGE_KEY_CATEGORIES = 'notflixx_categories';
+const STORAGE_KEY_INVITES = 'notflixx_invites';
+
+// Invitation system
+function getInvites() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_INVITES);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveInvites(invites) {
+  localStorage.setItem(STORAGE_KEY_INVITES, JSON.stringify(invites));
+}
+
+function generateInviteLink(role) {
+  const me = getCurrentUser();
+  if (!me || me.role !== 'owner') {
+    showToast('Only owners can create invitation links!');
+    return null;
+  }
+  const invites = getInvites();
+  const code = 'inv_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+  const invite = {
+    code,
+    role,
+    createdAt: Date.now(),
+    createdBy: me.username,
+    used: false
+  };
+  invites.push(invite);
+  saveInvites(invites);
+  return code;
+}
+
+function useInvite(code, usedByUsername) {
+  const invites = getInvites();
+  const invite = invites.find(i => i.code === code);
+  if (invite && !invite.used) {
+    invite.used = true;
+    invite.usedAt = Date.now();
+    invite.usedBy = usedByUsername || 'someone';
+    saveInvites(invites);
+    return invite.role;
+  }
+  return null;
+}
+
+function deleteInvite(code) {
+  const invites = getInvites().filter(i => i.code !== code);
+  saveInvites(invites);
+}
+
+function renderInvites() {
+  const container = document.getElementById('invitesList');
+  if (!container) return;
+  
+  const invites = getInvites();
+  if (invites.length === 0) {
+    container.innerHTML = '<p style="opacity:0.6;font-size:12px;">No invitation links yet.</p>';
+    return;
+  }
+  
+  container.innerHTML = invites.map(inv => {
+    const link = window.location.origin + window.location.pathname + '?invite=' + inv.code;
+    const date = new Date(inv.createdAt).toLocaleDateString();
+    const copyBtn = inv.used ? '' : `<button class="btn small-btn" onclick="navigator.clipboard.writeText('${link}');showToast('Copied!')">Copy</button>`;
+    return `
+      <div class="user-row" style="flex-wrap:wrap; gap:8px;">
+        <div class="user-meta">
+          <span class="role-badge">${inv.role}</span>
+          <span style="font-size:11px;opacity:0.7;">${inv.used ? 'Used by ' + (inv.usedBy || 'someone') : 'Active'}</span>
+          <span style="font-size:10px;opacity:0.5;">by ${inv.createdBy} • ${date}</span>
+        </div>
+        <div class="user-actions">
+          ${copyBtn}
+          <button class="btn small-btn" style="background:#ff5050;" onclick="deleteInvite('${inv.code}');renderInvites()">Delete</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Auto-refresh invites list every 5 seconds
+setInterval(() => {
+  if (document.getElementById('invitesList')) {
+    renderInvites();
+  }
+}, 5000);
+
+// Check for invite code on page load and show registration if found
+function checkInviteAndRegister() {
+  const params = new URLSearchParams(window.location.search);
+  const inviteCode = params.get('invite');
+  
+  if (inviteCode) {
+    const invites = getInvites();
+    const invite = invites.find(i => i.code === inviteCode);
+    
+    if (!invite) {
+      showToast('Invalid invitation link.');
+      return;
+    }
+    
+    if (invite.used) {
+      showToast('This invitation link has already been used.');
+      return;
+    }
+    
+    // Show registration modal
+    const regForm = `
+      <div id="inviteRegisterModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;">
+        <div class="admin-card" style="max-width:360px;width:100%;animation:fadeUp 0.3s ease;box-shadow:0 25px 80px rgba(0,0,0,0.9);">
+          <h2 style="margin-bottom:8px;">Create Account</h2>
+          <p class="contact-sub">You're invited to join as: <strong style="color:#a855f7;font-size:16px;">${invite.role}</strong></p>
+          <p style="font-size:13px;opacity:0.8;margin-bottom:20px;padding:10px;background:rgba(168,85,247,0.15);border-radius:8px;border:1px solid rgba(168,85,247,0.3);">👤 Invited by: <strong>${invite.createdBy}</strong></p>
+          <form id="inviteRegisterForm">
+            <div class="field">
+              <label>Username</label>
+              <input id="regUsername" type="text" placeholder="Username" required style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,200,255,0.2);background:rgba(0,20,40,0.9);color:white;font-size:14px;" />
+            </div>
+            <div class="field">
+              <label>Password</label>
+              <input id="regPassword" type="password" placeholder="Password" required style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,200,255,0.2);background:rgba(0,20,40,0.9);color:white;font-size:14px;" />
+            </div>
+            <button class="btn full-width" type="submit" style="margin-top:10px;">Create Account</button>
+          </form>
+          <button type="button" class="btn full-width btn-ghost" style="margin-top:10px;" onclick="window.location.href=window.location.pathname">Cancel</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', regForm);
+    
+    document.getElementById('inviteRegisterForm').addEventListener('submit', e => {
+      e.preventDefault();
+      
+      const username = document.getElementById('regUsername').value.trim();
+      const password = document.getElementById('regPassword').value;
+      
+      if (!username || !password) {
+        showToast('Please fill in all fields');
+        return;
+      }
+      
+      const users = getUsers();
+      if (users.find(u => u.username === username)) {
+        showToast('Username already exists');
+        return;
+      }
+      
+      // Create user with the role from invite
+      const newUser = {
+        id: 'u_' + Date.now(),
+        username,
+        passwordHash: hashPassword(password),
+        role: invite.role,
+        active: true,
+        createdAt: Date.now()
+      };
+      
+      users.push(newUser);
+      saveUsers(users);
+      
+      // Mark invite as used
+      useInvite(inviteCode, username);
+      
+      // Login as new user
+      localStorage.setItem(STORAGE_KEY_CURRENT, JSON.stringify(newUser));
+      
+      showToast('Account created successfully!');
+      
+      // Remove invite param and reload to show logged in state
+      window.location.href = window.location.pathname;
+    });
+  }
+}
 
 // Default content
 const DEFAULT_PROJECTS = [
@@ -57,11 +233,13 @@ function addCategory(name) {
 }
 
 function deleteCategory(id) {
-  if (!confirm('Delete this category? Projects in this category will need to be reassigned.')) return;
-  const cats = getCategories().filter(c => c.id !== id);
-  saveCategories(cats);
-  renderContentPanel();
-  logActivity('content', `Deleted category: ${id}`);
+  showConfirm('Delete Category', 'Delete this category? Projects in this category will need to be reassigned.', (confirmed) => {
+    if (!confirmed) return;
+    const cats = getCategories().filter(c => c.id !== id);
+    saveCategories(cats);
+    renderContentPanel();
+    logActivity('content', `Deleted category: ${id}`);
+  });
 }
 
 function updateCategory(id, newName) {
@@ -78,16 +256,17 @@ function updateCategory(id, newName) {
 }
 
 function promptEditCategory(id, currentName) {
-  const newName = prompt('Edit category name:', currentName);
-  if (!newName || newName.trim() === '') return;
-  const trimmed = newName.trim();
-  if (trimmed === currentName) return;
-  if (updateCategory(id, trimmed)) {
-    renderContentPanel();
-    logActivity('content', `Updated category: ${id} -> ${trimmed}`);
-  } else {
-    alert('Category name already exists or invalid!');
-  }
+  showPrompt('Edit Category', 'Enter new category name:', 'Category name', currentName, (newName) => {
+    if (!newName || newName.trim() === '') return;
+    const trimmed = newName.trim();
+    if (trimmed === currentName) return;
+    if (updateCategory(id, trimmed)) {
+      renderContentPanel();
+      logActivity('content', `Updated category: ${id} -> ${trimmed}`);
+    } else {
+      showToast('Category name already exists or invalid!');
+    }
+  });
 }
 
 // Content management functions
@@ -175,30 +354,35 @@ function editProject(id) {
   const project = content.projects.find(p => p.id === id);
   if (!project) return;
   
-  const newTitle = prompt('Edit title:', project.title);
-  if (newTitle === null) return;
-  
-  const newDesc = prompt('Edit description:', project.description);
-  if (newDesc === null) return;
-  
-  const newCategory = prompt('Edit category (games/servers/staff):', project.category);
-  if (newCategory === null) return;
-  
-  const newTags = prompt('Edit tags (comma separated):', project.tags.join(', '));
-  if (newTags === null) return;
-  
-  const newLink = prompt('Edit link:', project.link);
-  if (newLink === null) return;
-  
-  project.title = newTitle.trim();
-  project.description = newDesc.trim();
-  project.category = newCategory.trim();
-  project.tags = newTags.split(',').map(t => t.trim()).filter(t => t);
-  project.link = newLink.trim();
-  
-  saveContent(content);
-  renderContentPanel();
-  logActivity('content', `Edited project: ${project.title}`);
+  showPrompt('Edit Project', 'Enter new title:', 'Title', project.title, (newTitle) => {
+    if (newTitle === null) return;
+    
+    showPrompt('Edit Project', 'Enter new description:', 'Description', project.description, (newDesc) => {
+      if (newDesc === null) return;
+      
+      showPrompt('Edit Project', 'Enter category:', 'Category', project.category, (newCategory) => {
+        if (newCategory === null) return;
+        
+        showPrompt('Edit Project', 'Enter tags (comma separated):', 'Tags', project.tags.join(', '), (newTags) => {
+          if (newTags === null) return;
+          
+          showPrompt('Edit Project', 'Enter link:', 'Link', project.link, (newLink) => {
+            if (newLink === null) return;
+            
+            project.title = newTitle.trim();
+            project.description = newDesc.trim();
+            project.category = newCategory.trim();
+            project.tags = newTags.split(',').map(t => t.trim()).filter(t => t);
+            project.link = newLink.trim();
+            
+            saveContent(content);
+            renderContentPanel();
+            logActivity('content', `Edited project: ${project.title}`);
+          });
+        });
+      });
+    });
+  });
 }
 
 function editSkill(name) {
@@ -207,18 +391,20 @@ function editSkill(name) {
   const skill = content.skills.find(s => s.name === decodedName);
   if (!skill) return;
   
-  const newName = prompt('Edit skill name:', skill.name);
-  if (newName === null) return;
-  
-  const newPercent = prompt('Edit percentage:', skill.percent);
-  if (newPercent === null) return;
-  
-  skill.name = newName.trim();
-  skill.percent = parseInt(newPercent);
-  
-  saveContent(content);
-  renderContentPanel();
-  logActivity('content', `Edited skill: ${skill.name}`);
+  showPrompt('Edit Skill', 'Enter skill name:', 'Skill name', skill.name, (newName) => {
+    if (newName === null) return;
+    
+    showPrompt('Edit Skill', 'Enter percentage:', 'Percentage', skill.percent, (newPercent) => {
+      if (newPercent === null) return;
+      
+      skill.name = newName.trim();
+      skill.percent = parseInt(newPercent);
+      
+      saveContent(content);
+      renderContentPanel();
+      logActivity('content', `Edited skill: ${skill.name}`);
+    });
+  });
 }
 
 
@@ -464,41 +650,51 @@ function deletePermanent(id) {
 function clearCurrentView() {
   const messages = getMessages();
   if (currentView === 'trash') {
-    if (!confirm('Permanently delete all messages in Trash?')) return;
-    const remaining = messages.filter(m => !m.trashed);
-    saveMessages(remaining);
-    renderMessages();
+    showConfirm('Empty Trash', 'Permanently delete all messages in Trash?', (confirmed) => {
+      if (!confirmed) return;
+      const remaining = messages.filter(m => !m.trashed);
+      saveMessages(remaining);
+      renderMessages();
+    });
     return;
   }
 
   if (currentView === 'archived') {
-    if (!confirm('Delete all archived messages? (this is permanent)')) return;
-    const remaining = messages.filter(m => !m.archived);
-    saveMessages(remaining);
-    renderMessages();
+    showConfirm('Clear Archived', 'Delete all archived messages? (this is permanent)', (confirmed) => {
+      if (!confirmed) return;
+      const remaining = messages.filter(m => !m.archived);
+      saveMessages(remaining);
+      renderMessages();
+    });
     return;
   }
 
   if (currentView === 'pinned') {
-    if (!confirm('Unpin all pinned messages?')) return;
-    messages.forEach(m => { if (m.pinned) m.pinned = false; });
-    saveMessages(messages);
-    renderMessages();
+    showConfirm('Clear Pinned', 'Unpin all pinned messages?', (confirmed) => {
+      if (!confirmed) return;
+      messages.forEach(m => { if (m.pinned) m.pinned = false; });
+      saveMessages(messages);
+      renderMessages();
+    });
     return;
   }
 
   if (currentView === 'all') {
-    if (!confirm('Clear all messages? This will permanently delete everything stored on this device.')) return;
-    localStorage.removeItem(STORAGE_KEY_MESSAGES);
-    renderMessages();
+    showConfirm('Clear All Messages', 'Clear all messages? This will permanently delete everything stored on this device.', (confirmed) => {
+      if (!confirmed) return;
+      localStorage.removeItem(STORAGE_KEY_MESSAGES);
+      renderMessages();
+    });
     return;
   }
 
   // default: clear inbox (remove non-trashed messages)
-  if (!confirm('Clear inbox messages from this device?')) return;
-  const remaining = messages.filter(m => m.trashed);
-  saveMessages(remaining);
-  renderMessages();
+  showConfirm('Clear Inbox', 'Clear inbox messages from this device?', (confirmed) => {
+    if (!confirmed) return;
+    const remaining = messages.filter(m => m.trashed);
+    saveMessages(remaining);
+    renderMessages();
+  });
 }
 
 /* ---------- event wiring ---------- */
@@ -521,7 +717,7 @@ function getUsers() {
       arr.push({
         id: 'u_owner',
         username: USERNAME,
-        password: ownerHash,
+        passwordHash: ownerHash,
         role: 'owner',
         active: true,
         createdAt: Date.now()
@@ -529,7 +725,7 @@ function getUsers() {
     } else {
       existing.role = 'owner';
       existing.active = true;
-      if (!existing.password) existing.password = ownerHash;
+      if (!existing.passwordHash) existing.passwordHash = ownerHash;
     }
 
     // ensure each user has a displayName
@@ -555,7 +751,7 @@ function authenticateUser(username, password) {
   const u = users.find(x => x.username === username);
   if (!u) return null;
   if (!u.active) return { error: 'Account disabled' };
-  if (u.password === hashPassword(password)) return u;
+  if (u.passwordHash === hashPassword(password)) return u;
   return null;
 }
 
@@ -923,7 +1119,7 @@ function changeUserPassword(username, newPassword) {
   u.password = hashPassword(newPassword);
   saveUsers(users);
   logActivity('user', `Changed password for ${username}`);
-  alert(`Password changed for ${username}`);
+  showToast(`Password changed for ${username}`);
   renderUsers();
 }
 
@@ -933,7 +1129,7 @@ function loginAsUser(username) {
   const users = getUsers();
   const u = users.find(x => x.username === username);
   if (!u) return;
-  if (!u.active) { alert('Cannot login as disabled user'); return; }
+  if (!u.active) { showToast('Cannot login as disabled user'); return; }
   setCurrentUser(username);
   logActivity('auth', `Owner logged in as ${username}`);
   location.reload();
@@ -941,7 +1137,137 @@ function loginAsUser(username) {
 
 /* ----------------- attach events + integrate permissions + logging ----------------- */
 
+// Custom Modal Functions
+function showToast(message) {
+  const existing = document.getElementById('customToast');
+  if (existing) existing.remove();
+  
+  const toast = document.createElement('div');
+  toast.id = 'customToast';
+  toast.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#a855f7,#6366f1);color:white;padding:14px 28px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 10px 40px rgba(0,0,0,0.5);z-index:10000;animation:fadeUp 0.3s ease;';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
+
+function showModal(message, callback) {
+  const overlay = document.createElement('div');
+  overlay.id = 'customModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  
+  const box = document.createElement('div');
+  box.className = 'admin-card';
+  box.style.cssText = 'max-width:380px;width:100%;animation:fadeUp 0.3s ease;box-shadow:0 30px 100px rgba(0,0,0,0.9);';
+  box.innerHTML = `
+    <h2 style="margin-bottom:12px;">Notice</h2>
+    <p class="contact-sub" style="margin-bottom:20px;">${message}</p>
+    <button class="btn full-width" id="modalOk">OK</button>
+  `;
+  
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  
+  document.getElementById('modalOk').onclick = () => {
+    overlay.remove();
+    if (callback) callback();
+  };
+}
+
+function showConfirm(message, onConfirm) {
+  const overlay = document.createElement('div');
+  overlay.id = 'customConfirm';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  
+  const box = document.createElement('div');
+  box.className = 'admin-card';
+  box.style.cssText = 'max-width:380px;width:100%;animation:fadeUp 0.3s ease;box-shadow:0 30px 100px rgba(0,0,0,0.9);';
+  box.innerHTML = `
+    <h2 style="margin-bottom:12px;">Confirm</h2>
+    <p class="contact-sub" style="margin-bottom:20px;">${message}</p>
+    <div style="display:flex;gap:10px;">
+      <button class="btn full-width btn-ghost" id="confirmCancel">Cancel</button>
+      <button class="btn full-width" id="confirmOk" style="background:#ef4444;">Confirm</button>
+    </div>
+  `;
+  
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  
+  document.getElementById('confirmCancel').onclick = () => overlay.remove();
+  document.getElementById('confirmOk').onclick = () => {
+    overlay.remove();
+    if (onConfirm) onConfirm();
+  };
+}
+
+function showPrompt(title, message, placeholder, defaultValue, onSubmit) {
+  const overlay = document.createElement('div');
+  overlay.id = 'customPrompt';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  
+  const box = document.createElement('div');
+  box.className = 'admin-card';
+  box.style.cssText = 'max-width:380px;width:100%;animation:fadeUp 0.3s ease;box-shadow:0 30px 100px rgba(0,0,0,0.9);';
+  box.innerHTML = `
+    <h2 style="margin-bottom:8px;">${title}</h2>
+    <p class="contact-sub" style="margin-bottom:16px;">${message}</p>
+    <input id="promptInput" type="text" value="${defaultValue || ''}" placeholder="${placeholder}" style="width:100%;padding:14px;border-radius:10px;border:1px solid rgba(0,200,255,0.2);background:rgba(0,20,40,0.9);color:white;font-size:14px;margin-bottom:16px;box-sizing:border-box;">
+    <div style="display:flex;gap:10px;">
+      <button class="btn full-width btn-ghost" id="promptCancel">Cancel</button>
+      <button class="btn full-width" id="promptOk">OK</button>
+    </div>
+  `;
+  
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  
+  const input = document.getElementById('promptInput');
+  input.focus();
+  input.select();
+  
+  document.getElementById('promptCancel').onclick = () => overlay.remove();
+  document.getElementById('promptOk').onclick = () => {
+    overlay.remove();
+    if (onSubmit) onSubmit(input.value);
+  };
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      overlay.remove();
+      if (onSubmit) onSubmit(input.value);
+    }
+  });
+}
+
+// Forgot Password Functions
+const RESET_CODE = '826470';
+
+function showForgotPassword() {
+  const modal = document.getElementById('forgotPasswordModal');
+  const loginCard = document.getElementById('loginCard');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+  if (loginCard) {
+    loginCard.style.display = 'none';
+  }
+}
+
+function closeForgotPassword() {
+  const modal = document.getElementById('forgotPasswordModal');
+  const loginCard = document.getElementById('loginCard');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  if (loginCard) {
+    loginCard.style.display = 'block';
+  }
+}
+
+// Initialize forgot password handler
 document.addEventListener('DOMContentLoaded', () => {
+  // Check for invite code and show registration if needed
+  checkInviteAndRegister();
+  
   const loginForm = document.getElementById('loginForm');
   const loginStatus = document.getElementById('loginStatus');
   const loginCard = document.getElementById('loginCard');
@@ -994,12 +1320,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Forgot Password Form Handler
+  const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+  if (forgotPasswordForm) {
+    forgotPasswordForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const code = document.getElementById('resetCode').value.trim();
+      const username = document.getElementById('resetUsername').value.trim();
+      const newPass = document.getElementById('newPassword').value;
+      
+      if (code !== RESET_CODE) {
+        showToast('Invalid reset code!');
+        return;
+      }
+      
+      const users = getUsers();
+      const userIdx = users.findIndex(u => u.username === username);
+      
+      if (userIdx === -1) {
+        showToast('User not found!');
+        return;
+      }
+      
+      users[userIdx].passwordHash = hashPassword(newPass);
+      saveUsers(users);
+      
+      showToast('Password reset successful! You can now log in with your new password.');
+      closeForgotPassword();
+      document.getElementById('forgotPasswordForm').reset();
+    });
+  }
+
   if (tabs) {
     tabs.forEach(t => t.addEventListener('click', () => { setView(t.dataset.view); renderAnalytics(); }));
   }
 
   if (clearBtn) clearBtn.addEventListener('click', () => {
-    if (!canPerform('delete')) { alert('Insufficient permissions'); return; }
+    if (!canPerform('delete')) { showToast('Insufficient permissions'); return; }
     clearCurrentView(); logActivity('messages', 'Cleared current view'); renderAnalytics();
   });
 
@@ -1016,11 +1373,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const id = btn.dataset.id;
       const me = getCurrentUser();
       switch (action) {
-        case 'togglePin': if (!canPerform('moderate')) { alert('Insufficient permissions'); return; } togglePin(id); logActivity('msg', `${me.username} toggled pin ${id}`); break;
-        case 'toggleArchive': if (!canPerform('moderate')) { alert('Insufficient permissions'); return; } toggleArchive(id); logActivity('msg', `${me.username} toggled archive ${id}`); break;
-        case 'trash': if (!canPerform('moderate')) { alert('Insufficient permissions'); return; } moveToTrash(id); logActivity('msg', `${me.username} moved to trash ${id}`); break;
-        case 'restore': if (!canPerform('moderate')) { alert('Insufficient permissions'); return; } restoreMessage(id); logActivity('msg', `${me.username} restored ${id}`); break;
-        case 'deletePermanent': if (!canPerform('delete')) { alert('Insufficient permissions'); return; } deletePermanent(id); logActivity('msg', `${me.username} deleted ${id}`); break;
+        case 'togglePin': if (!canPerform('moderate')) { showToast('Insufficient permissions'); return; } togglePin(id); logActivity('msg', `${me.username} toggled pin ${id}`); break;
+        case 'toggleArchive': if (!canPerform('moderate')) { showToast('Insufficient permissions'); return; } toggleArchive(id); logActivity('msg', `${me.username} toggled archive ${id}`); break;
+        case 'trash': if (!canPerform('moderate')) { showToast('Insufficient permissions'); return; } moveToTrash(id); logActivity('msg', `${me.username} moved to trash ${id}`); break;
+        case 'restore': if (!canPerform('moderate')) { showToast('Insufficient permissions'); return; } restoreMessage(id); logActivity('msg', `${me.username} restored ${id}`); break;
+        case 'deletePermanent': if (!canPerform('delete')) { showToast('Insufficient permissions'); return; } deletePermanent(id); logActivity('msg', `${me.username} deleted ${id}`); break;
         case 'toggleRead': toggleRead(id); logActivity('msg', `${me ? me.username : 'anon'} toggled read ${id}`); break;
       }
       renderAnalytics();
@@ -1033,11 +1390,11 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       
       const me = getCurrentUser();
-      if (!me) { alert('You must be logged in'); return; }
+      if (!me) { showToast('You must be logged in'); return; }
       
       // Only owners can create users
       if (me.role !== 'owner') {
-        alert('Only owners can create users');
+        showToast('Only owners can create users');
         return;
       }
       
@@ -1054,38 +1411,42 @@ document.addEventListener('DOMContentLoaded', () => {
         const lockUntil = sessionStorage.getItem(lockKey);
         if (lockUntil && Date.now() < parseInt(lockUntil)) {
           const remaining = Math.ceil((parseInt(lockUntil) - Date.now()) / 1000);
-          alert(`Too many failed attempts. Try again in ${remaining} seconds.`);
+          showToast(`Too many failed attempts. Try again in ${remaining} seconds.`);
           return;
         }
         
         // Prompt for code FIRST
         const attemptsKey = 'owner_create_attempts';
         let attempts = parseInt(sessionStorage.getItem(attemptsKey) || '0');
-        const code = prompt(`You are creating an OWNER account. Enter verification code (${3 - attempts} attempts remaining):`);
-        
-        if (code !== '826470') {
-          attempts++;
-          sessionStorage.setItem(attemptsKey, attempts.toString());
+        showPrompt('Owner Verification', `You are creating an OWNER account. Enter verification code (${3 - attempts} attempts remaining):`, 'Verification Code', '', (code) => {
+          if (code === null) return; // User cancelled
           
-          if (attempts >= 3) {
-            // Lock out for 1 minute
-            sessionStorage.setItem(lockKey, (Date.now() + 60000).toString());
-            sessionStorage.removeItem(attemptsKey);
-            alert('Too many failed attempts. Locked for 1 minute.');
-          } else {
-            alert('Incorrect code.');
+          if (code !== '826470') {
+            attempts++;
+            sessionStorage.setItem(attemptsKey, attempts.toString());
+            
+            if (attempts >= 3) {
+              // Lock out for 1 minute
+              sessionStorage.setItem(lockKey, (Date.now() + 60000).toString());
+              sessionStorage.removeItem(attemptsKey);
+              showToast('Too many failed attempts. Locked for 1 minute.');
+              return;
+            }
+            
+            showToast(`Invalid code. ${3 - attempts} attempts remaining.`);
+            return;
           }
-          return;
-        }
-        
-        // Code correct - reset attempts
-        sessionStorage.removeItem(attemptsKey);
-      } else {
-        // For non-owner ranks, use the rank check
-        if (targetRank >= myRank) {
-          alert(`You cannot create users with rank '${role}' (your rank: ${me.role})`);
-          return;
-        }
+          
+          // Code correct - proceed to create user
+          createUserAccount(username, password, role, me);
+        });
+        return;
+      }
+
+      // For non-owner ranks, use the rank check
+      if (targetRank >= myRank) {
+        showToast(`You cannot create users with rank '${role}' (your rank: ${me.role})`);
+        return;
       }
 
       try {
@@ -1097,9 +1458,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderUsers();
         renderActivity();
-      } catch (err) { alert(err.message); }
+      } catch (err) { showToast(err.message); }
     });
   }
+
+  // Invite links form
+  const createInviteForm = document.getElementById('createInviteForm');
+  if (createInviteForm) {
+    createInviteForm.addEventListener('submit', e => {
+      e.preventDefault();
+      
+      const me = getCurrentUser();
+      if (!me) { showToast('You must be logged in'); return; }
+      
+      // Check hierarchy - need to be at least one level above the target role
+      const myRank = userRoleRank(me.role);
+      const role = document.getElementById('inviteRole').value;
+      const targetRank = userRoleRank(role);
+      
+      if (myRank <= targetRank) {
+        showToast(`You need a higher rank to create ${role} invites`);
+        return;
+      }
+      
+      const code = generateInviteLink(role);
+      const link = window.location.origin + window.location.pathname + '?invite=' + code;
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(link).then(() => {
+        showToast('Invitation link copied to clipboard!');
+        showModal('Invitation Link', `<p style="margin-bottom:12px;">Link: <code style="background:rgba(0,0,0,0.5);padding:4px 8px;border-radius:4px;">${link}</code></p>`);
+      }).catch(() => {
+        showModal('Invitation Link', `<p style="margin-bottom:12px;">Copy this link manually:</p><code style="background:rgba(0,0,0,0.5);padding:4px 8px;border-radius:4px;word-break:break-all;">${link}</code>`);
+      });
+      
+      renderInvites();
+      logActivity('invite', `Generated ${role} invite`);
+    });
+  }
+
+  // Render invites on page load
+  renderInvites();
 
   if (usersList) {
     usersList.addEventListener('change', e => {
@@ -1109,14 +1508,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const me = getCurrentUser();
       // prevent users from modifying their own role
       if (me && sel.dataset.username === me.username) {
-        alert('You cannot change your own role');
+        showToast('You cannot change your own role');
         renderUsers();
         return;
       }
 
       // Only owners can change user roles
       if (!me || me.role !== 'owner') {
-        alert('Only owners can change user roles');
+        showToast('Only owners can change user roles');
         renderUsers();
         return;
       }
@@ -1131,7 +1530,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const lockUntil = sessionStorage.getItem(lockKey);
         if (lockUntil && Date.now() < parseInt(lockUntil)) {
           const remaining = Math.ceil((parseInt(lockUntil) - Date.now()) / 1000);
-          alert(`Too many failed attempts. Try again in ${remaining} seconds.`);
+          showToast(`Too many failed attempts. Try again in ${remaining} seconds.`);
           renderUsers();
           return;
         }
@@ -1139,31 +1538,40 @@ document.addEventListener('DOMContentLoaded', () => {
         // Prompt for code FIRST
         const attemptsKey = 'owner_promote_attempts';
         let attempts = parseInt(sessionStorage.getItem(attemptsKey) || '0');
-        const code = prompt(`You are promoting a user to OWNER. Enter verification code (${3 - attempts} attempts remaining):`);
-        
-        if (code !== '826470') {
-          attempts++;
-          sessionStorage.setItem(attemptsKey, attempts.toString());
-          
-          if (attempts >= 3) {
-            sessionStorage.setItem(lockKey, (Date.now() + 60000).toString());
-            sessionStorage.removeItem(attemptsKey);
-            alert('Too many failed attempts. Locked for 1 minute.');
-          } else {
-            alert('Incorrect code.');
+        showPrompt('Owner Promotion', `You are promoting a user to OWNER. Enter verification code (${3 - attempts} attempts remaining):`, 'Verification Code', '', (code) => {
+          if (code === null) {
+            renderUsers();
+            return;
           }
-          renderUsers();
-          return;
-        }
-        
-        sessionStorage.removeItem(attemptsKey);
-      } else {
-        // For non-owner ranks, use the rank check
-        if (targetRank >= myRank) {
-          alert(`You cannot set rank to '${sel.value}' (your rank: ${me.role})`);
-          renderUsers();
-          return;
-        }
+          
+          if (code !== '826470') {
+            attempts++;
+            sessionStorage.setItem(attemptsKey, attempts.toString());
+            
+            if (attempts >= 3) {
+              sessionStorage.setItem(lockKey, (Date.now() + 60000).toString());
+              sessionStorage.removeItem(attemptsKey);
+              showToast('Too many failed attempts. Locked for 1 minute.');
+            } else {
+              showToast('Incorrect code.');
+            }
+            renderUsers();
+            return;
+          }
+          
+          sessionStorage.removeItem(attemptsKey);
+          
+          updateUserRole(sel.dataset.username, sel.value);
+          renderActivity();
+        });
+        return;
+      }
+      
+      // For non-owner ranks, use the rank check
+      if (targetRank >= myRank) {
+        showToast(`You cannot set rank to '${sel.value}' (your rank: ${me.role})`);
+        renderUsers();
+        return;
       }
       
       updateUserRole(sel.dataset.username, sel.value);
@@ -1179,20 +1587,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // prevent users from modifying their own account
       if (me && uname === me.username) {
-        alert('You cannot modify your own account');
+        showToast('You cannot modify your own account');
         return;
       }
 
       // Only owners can delete or toggle users
       if (me.role !== 'owner') {
-        alert('Only owners can delete or disable users');
+        showToast('Only owners can delete or disable users');
         return;
       }
 
       if (act === 'toggleActive') {
         const targetUser = getUsers().find(u => u.username === uname);
         if (targetUser && userRoleRank(targetUser.role) >= userRoleRank(me.role)) {
-          alert(`You cannot modify users with rank '${targetUser.role}' or higher`);
+          showToast(`You cannot modify users with rank '${targetUser.role}' or higher`);
           return;
         }
         toggleUserActive(uname); renderActivity();
@@ -1200,27 +1608,51 @@ document.addEventListener('DOMContentLoaded', () => {
       if (act === 'deleteUser') {
         const targetUser = getUsers().find(u => u.username === uname);
         if (targetUser && userRoleRank(targetUser.role) >= userRoleRank(me.role)) {
-          alert(`You cannot delete users with rank '${targetUser.role}' or higher`);
+          showToast(`You cannot delete users with rank '${targetUser.role}' or higher`);
           return;
         }
-        if (!confirm('Delete user ' + uname + '?')) return;
-        deleteUser(uname); renderActivity();
+        showConfirm('Delete User', 'Delete user ' + uname + '?', (confirmed) => {
+          if (!confirmed) return;
+          deleteUser(uname); renderActivity();
+        });
       }
       if (act === 'loginAs') {
-        if (!confirm('Login as ' + uname + '? This will log you out from your current account.')) return;
-        loginAsUser(uname);
+        showConfirm('Login As User', 'Login as ' + uname + '? This will log you out from your current account.', (confirmed) => {
+          if (!confirmed) return;
+          loginAsUser(uname);
+        });
       }
       if (act === 'changePassword') {
-        const newPass = prompt('Enter new password for ' + uname + ':');
-        if (!newPass || !newPass.trim()) return;
-        const confirmPass = prompt('Confirm new password:');
-        if (newPass !== confirmPass) { alert('Passwords do not match'); return; }
-        changeUserPassword(uname, newPass);
+        showPrompt('Change Password', 'Enter new password for ' + uname + ':', 'New Password', '', (newPass) => {
+          if (!newPass || !newPass.trim()) return;
+          const modal = document.createElement('div');
+          modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+          modal.innerHTML = `
+            <div class="admin-card" style="max-width:320px;width:100%;box-shadow:0 25px 80px rgba(0,0,0,0.9);">
+              <h3>Confirm Password</h3>
+              <p class="contact-sub">Re-enter your new password</p>
+              <input id="confirmPassInput" type="password" placeholder="Confirm password" style="width:100%;padding:14px;border-radius:10px;border:1px solid rgba(0,200,255,0.2);background:rgba(0,20,40,0.9);color:white;margin-bottom:12px;box-sizing:border-box;">
+              <button class="btn full-width" id="confirmPassBtn">Confirm</button>
+              <button class="btn full-width btn-ghost" id="cancelPassBtn" style="margin-top:8px;">Cancel</button>
+            </div>
+          `;
+          document.body.appendChild(modal);
+          document.getElementById('cancelPassBtn').onclick = () => modal.remove();
+          document.getElementById('confirmPassBtn').onclick = () => {
+            const confirmPass = document.getElementById('confirmPassInput').value;
+            if (newPass.trim() !== confirmPass.trim()) {
+              showToast('Passwords do not match');
+              return;
+            }
+            modal.remove();
+            changeUserPassword(uname, newPass);
+          };
+        });
       }
     });
   }
 
-  if (clearActivityBtn) clearActivityBtn.addEventListener('click', () => { if (!confirm('Clear activity log?')) return; clearActivity(); });
+  if (clearActivityBtn) clearActivityBtn.addEventListener('click', () => { showConfirm('Clear Activity Log', 'Clear activity log?', (confirmed) => { if (!confirmed) return; clearActivity(); }); });
 
   // Content tab switching (Projects/Skills)
   const contentTabs = document.querySelectorAll('.content-tabs .tab-btn');
@@ -1251,7 +1683,7 @@ document.addEventListener('DOMContentLoaded', () => {
     addProjectForm.addEventListener('submit', e => {
       e.preventDefault();
       const me = getCurrentUser();
-      if (!me || me.role !== 'owner') { alert('Only owners can manage content'); return; }
+      if (!me || me.role !== 'owner') { showToast('Only owners can manage content'); return; }
       const project = {
         title: document.getElementById('projTitle').value.trim(),
         category: document.getElementById('projCategory').value,
@@ -1298,7 +1730,7 @@ document.addEventListener('DOMContentLoaded', () => {
     addSkillForm.addEventListener('submit', e => {
       e.preventDefault();
       const me = getCurrentUser();
-      if (!me || me.role !== 'owner') { alert('Only owners can manage content'); return; }
+      if (!me || me.role !== 'owner') { showToast('Only owners can manage content'); return; }
       const name = document.getElementById('skillName').value.trim();
       const percent = document.getElementById('skillPercent').value;
       addSkill(name, percent);
@@ -1314,14 +1746,14 @@ document.addEventListener('DOMContentLoaded', () => {
     addCategoryForm.addEventListener('submit', e => {
       e.preventDefault();
       const me = getCurrentUser();
-      if (!me || me.role !== 'owner') { alert('Only owners can manage content'); return; }
+      if (!me || me.role !== 'owner') { showToast('Only owners can manage content'); return; }
       const name = document.getElementById('categoryName').value.trim();
       if (addCategory(name)) {
         addCategoryForm.reset();
         renderContentPanel();
         logActivity('content', `Added category: ${name}`);
       } else {
-        alert('Category already exists!');
+        showToast('Category already exists!');
       }
     });
   }
@@ -1334,18 +1766,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
     const me = getCurrentUser();
-    if (!me || me.role !== 'owner') { alert('Only owners can manage content'); return; }
+    if (!me || me.role !== 'owner') { showToast('Only owners can manage content'); return; }
     if (btn.dataset.action === 'deleteProject') {
-      if (!confirm('Delete this project?')) return;
-      deleteProject(btn.dataset.id);
-      renderContentPanel();
-      logActivity('content', 'Deleted project');
+      showConfirm('Delete Project', 'Delete this project?', (confirmed) => {
+        if (!confirmed) return;
+        deleteProject(btn.dataset.id);
+        renderContentPanel();
+        logActivity('content', 'Deleted project');
+      });
     }
     if (btn.dataset.action === 'deleteSkill') {
-      if (!confirm('Delete this skill?')) return;
-      deleteSkill(btn.dataset.name);
-      renderContentPanel();
-      logActivity('content', `Deleted skill: ${btn.dataset.name}`);
+      showConfirm('Delete Skill', 'Delete this skill?', (confirmed) => {
+        if (!confirmed) return;
+        deleteSkill(btn.dataset.name);
+        renderContentPanel();
+        logActivity('content', `Deleted skill: ${btn.dataset.name}`);
+      });
     }
   };
 
@@ -1358,19 +1794,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const me = getCurrentUser();
       if (!me) return;
       const current = document.getElementById('currentPassword').value;
-      const next = document.getElementById('newPassword').value;
-      const confirmPw = document.getElementById('confirmPassword').value;
-      if (next !== confirmPw) {
+      const next = document.getElementById('profileNewPassword').value;
+      const confirmPw = document.getElementById('profileConfirmPassword').value;
+      if (next.trim() !== confirmPw.trim()) {
         if (profileStatus) { profileStatus.textContent = 'New passwords do not match.'; profileStatus.style.color = '#ff7aa2'; }
         return;
       }
       const users = getUsers();
       const u = users.find(x => x.username === me.username);
-      if (!u || u.password !== hashPassword(current)) {
+      if (!u || u.passwordHash !== hashPassword(current)) {
         if (profileStatus) { profileStatus.textContent = 'Current password is incorrect.'; profileStatus.style.color = '#ff7aa2'; }
         return;
       }
-      u.password = hashPassword(next);
+      u.passwordHash = hashPassword(next);
       saveUsers(users);
       logActivity('user', `${me.username} changed their password`);
       if (profileStatus) { profileStatus.textContent = 'Password updated.'; profileStatus.style.color = '#6cffb2'; }
