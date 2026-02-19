@@ -9,6 +9,7 @@ const STORAGE_KEY_CONTENT = 'notflixx_content';
 const STORAGE_KEY_PROJECT_IMAGES = 'notflixx_project_images';
 const STORAGE_KEY_CATEGORIES = 'notflixx_categories';
 const STORAGE_KEY_INVITES = 'notflixx_invites';
+const STORAGE_KEY_USER_MESSAGES = 'notflixx_user_messages';
 
 // Invitation system
 function getInvites() {
@@ -20,6 +21,56 @@ function getInvites() {
 
 function saveInvites(invites) {
   localStorage.setItem(STORAGE_KEY_INVITES, JSON.stringify(invites));
+}
+
+// User-to-user messaging
+function getUserMessages() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY_USER_MESSAGES) || '[]'); } catch { return []; }
+}
+
+function saveUserMessages(msgs) {
+  localStorage.setItem(STORAGE_KEY_USER_MESSAGES, JSON.stringify(msgs));
+}
+
+function sendUserMessage(toUsername, content) {
+  const me = getCurrentUser();
+  if (!me || !content.trim()) return false;
+  // don't allow messaging yourself
+  if (toUsername === me.username) { showToast('You cannot message yourself'); return false; }
+  const msgs = getUserMessages();
+  msgs.push({
+    id: genId(),
+    from: me.username,
+    to: toUsername,
+    content: content.trim(),
+    time: Date.now(),
+    // delivered = reached recipient (local app); read = seen by recipient
+    delivered: true,
+    read: false
+  });
+  saveUserMessages(msgs);
+  return true;
+}
+
+function getUserInbox(username) {
+  return getUserMessages().filter(m => m.to === username);
+}
+
+function getUserSent(username) {
+  return getUserMessages().filter(m => m.from === username);
+}
+
+function markMessageRead(id) {
+  const msgs = getUserMessages();
+  const idx = msgs.findIndex(m => m.id === id);
+  if (idx !== -1) {
+    // only update if not already marked read — record seen timestamp
+    if (!msgs[idx].read) {
+      msgs[idx].read = true;
+      msgs[idx].seenAt = Date.now();
+      saveUserMessages(msgs);
+    }
+  }
 }
 
 function generateInviteLink(role) {
@@ -66,7 +117,15 @@ function renderInvites() {
   
   const invites = getInvites();
   if (invites.length === 0) {
-    container.innerHTML = '<p style="opacity:0.6;font-size:12px;">No invitation links yet.</p>';
+    // keep the panel height consistent so it remains beside the users list
+    container.innerHTML = `
+      <div class="empty-placeholder" style="padding:18px;">
+        <div style="text-align:center;">
+          <div style="font-weight:600;margin-bottom:6px;opacity:0.9;">No invitation links yet</div>
+          <div style="font-size:12px;opacity:0.6;">Generate an invite to share with others</div>
+        </div>
+      </div>
+    `;
     return;
   }
   
@@ -174,8 +233,8 @@ function checkInviteAndRegister() {
       // Mark invite as used
       useInvite(inviteCode, username);
       
-      // Login as new user
-      localStorage.setItem(STORAGE_KEY_CURRENT, JSON.stringify(newUser));
+      // Login as new user (store username in session)
+      setCurrentUser(username);
       
       showToast('Account created successfully!');
       
@@ -710,6 +769,15 @@ function getUsers() {
     const raw = localStorage.getItem(STORAGE_KEY_USERS);
     let arr = raw ? JSON.parse(raw) : [];
 
+    // Deduplicate users by username (case-insensitive) to avoid rendering duplicates
+    const seen = new Set();
+    arr = arr.filter(u => {
+      const key = (u.username || '').toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
     // ensure the built‑in admin account always exists and is OWNER
     const ownerHash = hashPassword(PASSWORD);
     const existing = arr.find(u => u.username === USERNAME);
@@ -766,6 +834,16 @@ function getCurrentUser() {
 }
 
 function logoutCurrentUser() {
+  const me = getCurrentUser();
+  if (me) {
+    const users = getUsers();
+    const idx = users.findIndex(u => u.username === me.username);
+    if (idx !== -1) {
+      users[idx].lastOnline = Date.now();
+      users[idx].isOnline = false;
+      saveUsers(users);
+    }
+  }
   sessionStorage.removeItem(STORAGE_KEY_CURRENT);
   location.reload();
 }
@@ -818,6 +896,34 @@ function setAvatar(username, dataUrl) {
   map[username] = dataUrl;
   saveAvatarMap(map);
 }
+
+function removeAvatar(username) {
+  try {
+    const map = getAvatarMap();
+    const keyExact = Object.prototype.hasOwnProperty.call(map, username) ? username : null;
+    // try case-insensitive match if exact not found
+    let keyFound = keyExact;
+    if (!keyFound) {
+      const lower = (username || '').toLowerCase();
+      for (const k of Object.keys(map)) {
+        if ((k || '').toLowerCase() === lower) { keyFound = k; break; }
+      }
+    }
+
+    if (keyFound) {
+      delete map[keyFound];
+      saveAvatarMap(map);
+      console.log('removeAvatar: removed avatar for', username, '(matched key:', keyFound + ')');
+      return true;
+    }
+
+    console.log('removeAvatar: no avatar to remove for', username);
+    return false;
+  } catch (err) {
+    console.error('removeAvatar error', err);
+    return false;
+  }
+}
 function canPerform(action) {
   const me = getCurrentUser();
   if (!me) return false;
@@ -839,7 +945,7 @@ function renderCurrentUser() {
   if (!me) { info.textContent = 'Not signed in'; return; }
 
   const avatarUrl = getAvatar(me.username);
-  const initials = escapeHtml((me.username || '?')[0].toUpperCase());
+  const initials = escapeHtml((me.username || '?')[0] || '?');
   const permsText = describePermissions(me.role);
 
   info.innerHTML = `
@@ -854,7 +960,6 @@ function renderCurrentUser() {
         </div>
       </div>
       <div class="current-user-actions">
-        <button id="openProfile" class="btn btn-ghost small-ghost">Profile</button>
         <button id="logoutBtn" class="btn btn-ghost small-ghost">Logout</button>
       </div>
     </div>
@@ -863,13 +968,23 @@ function renderCurrentUser() {
   const lb = document.getElementById('logoutBtn');
   if (lb) lb.addEventListener('click', logoutCurrentUser);
 
-  const openProfile = document.getElementById('openProfile');
-  const profilePanel = document.getElementById('profilePanel');
-  if (openProfile && profilePanel) {
-    openProfile.addEventListener('click', () => {
-      profilePanel.classList.toggle('open');
-    });
+  // populate profile panel (if present)
+  const profileAvatarEl = document.getElementById('profileAvatarDisplay');
+  const profileNameEl = document.getElementById('profileDisplayName');
+  const profileRoleEl = document.getElementById('profileRole');
+  const youBadge = document.getElementById('youBadge');
+  const newUsernameInput = document.getElementById('profileNewUsername');
+  const avatarUrl2 = getAvatar(me.username);
+  if (profileAvatarEl) {
+    if (avatarUrl2) profileAvatarEl.innerHTML = `<img src="${avatarUrl2}" alt="${escapeHtml(me.username)}">`;
+    else profileAvatarEl.textContent = (me.username[0] || '?');
   }
+  if (profileNameEl) profileNameEl.textContent = me.username;
+  if (profileRoleEl) profileRoleEl.textContent = describePermissions(me.role);
+  if (youBadge) youBadge.style.display = 'inline-flex';
+  if (newUsernameInput) newUsernameInput.value = me.username;
+  const clearAvatarBtn = document.getElementById('clearAvatarBtn');
+  if (clearAvatarBtn) clearAvatarBtn.style.display = avatarUrl2 ? 'inline-flex' : 'none';
 }
 
 function renderUsers() {
@@ -878,6 +993,21 @@ function renderUsers() {
   if (!list) return;
   const users = getUsers();
   const me = getCurrentUser();
+
+  // Helper to format last online
+  function formatLastOnline(user) {
+    if (user.isOnline) return '<span style="color:#00ff88;">● Online</span>';
+    if (!user.lastOnline) return '<span style="opacity:0.6;">Never</span>';
+    const diff = Date.now() - user.lastOnline;
+    const mins = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    if (mins < 1) return '<span style="opacity:0.6;">Just now</span>';
+    if (mins < 60) return `<span style="opacity:0.6;">${mins}m ago</span>`;
+    if (hours < 24) return `<span style="opacity:0.6;">${hours}h ago</span>`;
+    if (days < 7) return `<span style="opacity:0.6;">${days}d ago</span>`;
+    return `<span style="opacity:0.6;">${new Date(user.lastOnline).toLocaleDateString()}</span>`;
+  }
 
   if (!canPerform('manageUsers')) {
     // hide creation UI and show a read-only list
@@ -889,10 +1019,25 @@ function renderUsers() {
           <div class="role-badge">${escapeHtml(describePermissions(u.role))}</div>
         </div>
         <div class="user-actions">
-          <div style="opacity:0.85; font-size:13px;">${u.active ? 'Active' : 'Disabled'}</div>
+          <div style="opacity:0.85; font-size:13px;">${formatLastOnline(u)}</div>
         </div>
       </div>
     `).join('');
+
+    // allow clicking a user to open chat
+    list.querySelectorAll('.user-row').forEach(row => {
+      const username = row.dataset.username;
+      if (!username) return;
+      // don't allow opening chat for the current logged-in user
+      if (username === me.username) { row.style.cursor = 'default'; return; }
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', (e) => {
+        // ignore clicks on interactive controls inside the row
+        if (e.target.closest('button') || e.target.closest('a') || e.target.closest('[data-action]')) return;
+        openChatWith(username);
+      });
+    });
+
     return;
   }
 
@@ -927,25 +1072,291 @@ function renderUsers() {
           <div style="margin-left:12px;">
             <strong>${escapeHtml(u.displayName || u.username)}</strong>
             <div class="role-badge">${escapeHtml(describePermissions(u.role))}</div>
+            <div style="font-size:11px;opacity:0.7;margin-top:4px;">${formatLastOnline(u)}</div>
           </div>
         </div>
         <div class="user-actions">
-          <select class="role-select" data-username="${u.username}" ${isCurrentUser ? 'disabled' : ''}>
-            <option value="viewer" ${u.role==='viewer'?'selected':''}>Viewer</option>
-            <option value="mod" ${u.role==='mod'?'selected':''}>Moderator</option>
-            <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
-            <option value="owner" ${u.role==='owner'?'selected':''}>Owner</option>
-          </select>
-
-          ${isOwner && !isOwnerAdmin ? `<button class="btn btn-ghost" data-action="loginAs" data-username="${u.username}">Login</button>` : ''}
-          ${isOwner && !isOwnerAdmin ? `<button class="btn btn-ghost" data-action="changePassword" data-username="${u.username}">Password</button>` : ''}
-
-          ${!isCurrentUser ? `<button class="btn" data-action="toggleActive" data-username="${u.username}">${u.active? 'Disable':'Enable'}</button>` : ''}
-          ${!isCurrentUser ? `<button class="btn btn-ghost" data-action="deleteUser" data-username="${u.username}">Delete</button>` : ''}
+          ${!isCurrentUser ? `<button class="btn" data-action="editUser" data-username="${u.username}">Edit</button>` : ''}
         </div>
       </div>
     `;
   }).join('');
+
+  // allow clicking a user to open chat (ignore clicks on buttons/edit controls)
+  list.querySelectorAll('.user-row').forEach(row => {
+    const username = row.dataset.username;
+    if (!username) return;
+    if (username === me.username) { row.style.cursor = 'default'; return; }
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('[data-action]')) return;
+      openChatWith(username);
+    });
+  });
+}
+
+function renderUserInbox() {
+  const inboxEl = document.getElementById('userInbox');
+  const toSelect = document.getElementById('messageTo');
+  if (!inboxEl) return;
+  
+  const me = getCurrentUser();
+  if (!me) {
+    inboxEl.innerHTML = '<p style="opacity:0.6;">Log in to view messages.</p>';
+    return;
+  }
+  
+  const messages = getUserInbox(me.username);
+  const users = getUsers();
+  
+  // Populate the "To" dropdown with other users
+  if (toSelect) {
+    toSelect.innerHTML = users
+      .filter(u => u.username !== me.username)
+      .map(u => `<option value="${escapeHtml(u.username)}">${escapeHtml(u.username)}</option>`)
+      .join('');
+  }
+  
+  if (messages.length === 0) {
+    inboxEl.innerHTML = '<p style="opacity:0.6;">No messages yet.</p>';
+    return;
+  }
+  
+  inboxEl.innerHTML = messages.map(m => `
+    <div class="user-row" data-username="${escapeHtml(m.from)}" style="flex-direction:column;align-items:flex-start;">
+      <div style="display:flex;justify-content:space-between;width:100%;margin-bottom:4px;">
+        <strong>${escapeHtml(m.from)}</strong>
+        <span style="font-size:11px;opacity:0.6;">${new Date(m.time).toLocaleString()}</span>
+      </div>
+      <p style="margin:0;font-size:13px;opacity:0.9;">${escapeHtml(m.content)}</p>
+    </div>
+  `).join('');
+
+  // clicking an inbox entry opens the chat with that user
+  inboxEl.querySelectorAll('.user-row').forEach(row => {
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('[data-action]')) return;
+      const username = row.dataset.username;
+      if (username) openChatWith(username);
+    });
+  });
+}
+
+// Chat / Direct Messaging
+function openChatWith(username) {
+  if (!username) return;
+  const me = getCurrentUser();
+  if (me && username === me.username) { showToast('You cannot message yourself'); return; }
+  currentChatUser = username;
+  // switch to Chat main tab (re-uses existing tab handler)
+  const chatTabBtn = document.querySelector('.main-tab-btn[data-main="chat"]');
+  if (chatTabBtn) chatTabBtn.click();
+  // show focused chat layout
+  const chatSection = document.getElementById('chatSection');
+  if (chatSection) chatSection.classList.add('chat-open');
+  renderChatUserList();
+  renderChat();
+  const input = document.getElementById('chatMessageInput');
+  if (input) input.focus();
+}
+
+let currentChatUser = null;
+
+function renderChatUserList() {
+  const listEl = document.getElementById('chatUserList');
+  if (!listEl) return;
+  
+  const me = getCurrentUser();
+  if (!me) {
+    listEl.innerHTML = '<p style="opacity:0.6;">Log in to chat.</p>';
+    return;
+  }
+  
+  const users = getUsers().filter(u => u.username !== me.username);
+  const messages = getUserMessages();
+  
+  // Get last message for each user
+  const userLastMsg = {};
+  messages.forEach(m => {
+    if (m.from === me.username || m.to === me.username) {
+      const other = m.from === me.username ? m.to : m.from;
+      if (!userLastMsg[other] || m.time > userLastMsg[other].time) {
+        userLastMsg[other] = m;
+      }
+    }
+  });
+  
+  if (users.length === 0) {
+    listEl.innerHTML = '<p style="opacity:0.6;">No other users.</p>';
+    return;
+  }
+  
+  listEl.innerHTML = users.map(u => {
+    const avatarUrl = getAvatar(u.username);
+    const initials = (u.username[0] || '?');
+    const lastMsg = userLastMsg[u.username];
+    const isSelected = currentChatUser === u.username;
+    const isOnline = u.isOnline;
+    
+    return `
+      <div class="user-row ${isSelected ? 'active' : ''}" data-username="${escapeHtml(u.username)}" style="cursor:pointer;${isSelected ? 'background:rgba(0,200,255,0.1);' : ''}">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="avatar-circle" style="width:36px;height:36px;font-size:14px;">
+            ${avatarUrl ? `<img src="${avatarUrl}" alt="${escapeHtml(u.username)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : initials}
+          </div>
+          <div>
+            <div style="font-weight:600;display:flex;align-items:center;gap:6px;">
+              ${escapeHtml(u.username)}
+              ${isOnline ? '<span style="color:#00ff88;font-size:10px;">●</span>' : ''}
+            </div>
+            <div style="font-size:11px;opacity:0.6;">
+              ${lastMsg ? (lastMsg.from === me.username ? 'You: ' : '') + escapeHtml(lastMsg.content.substring(0, 20)) + (lastMsg.content.length > 20 ? '...' : '') : 'No messages'}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  // Add click handlers
+  listEl.querySelectorAll('.user-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const username = row.dataset.username;
+      currentChatUser = username;
+      // switch to focused chat view (hide user list)
+      const chatSection = document.getElementById('chatSection');
+      if (chatSection) chatSection.classList.add('chat-open');
+      renderChatUserList();
+      renderChat();
+      // focus the message input for faster typing
+      const input = document.getElementById('chatMessageInput');
+      if (input) input.focus();
+    });
+  });
+}
+
+function renderChat() {
+  const headerEl = document.getElementById('chatWithUser');
+  const statusEl = document.getElementById('chatUserStatus');
+  const messagesEl = document.getElementById('chatMessages');
+  const inputArea = document.getElementById('chatInputArea');
+  
+  const me = getCurrentUser();
+  if (!me) {
+    if (headerEl) headerEl.textContent = 'Log in to chat';
+    return;
+  }
+  
+  if (!currentChatUser) {
+    if (headerEl) headerEl.textContent = 'Select a conversation';
+    if (statusEl) statusEl.innerHTML = '';
+    if (messagesEl) messagesEl.innerHTML = '<p style="opacity:0.6;text-align:center;">Click a user to start chatting</p>';
+    if (inputArea) inputArea.style.display = 'none';
+    const cs = document.getElementById('chatSection');
+    if (cs) cs.classList.remove('chat-open');
+    const backBtn = document.getElementById('chatBackBtn');
+    if (backBtn) backBtn.style.display = 'none';
+    return;
+  }
+  
+  if (inputArea) inputArea.style.display = 'flex';
+  // show back button when viewing a selected conversation
+  const backBtn = document.getElementById('chatBackBtn');
+  if (backBtn) backBtn.style.display = 'inline-flex';
+  
+  const otherUser = getUsers().find(u => u.username === currentChatUser);
+  if (headerEl) headerEl.textContent = currentChatUser;
+  
+  if (statusEl && otherUser) {
+    if (otherUser.isOnline) {
+      statusEl.innerHTML = '<span style="color:#00ff88;">● Online</span>';
+    } else if (otherUser.lastOnline) {
+      const diff = Date.now() - otherUser.lastOnline;
+      const mins = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
+      let timeStr = '';
+      if (mins < 1) timeStr = 'Last seen just now';
+      else if (mins < 60) timeStr = `Last seen ${mins}m ago`;
+      else if (hours < 24) timeStr = `Last seen ${hours}h ago`;
+      else if (days < 7) timeStr = `Last seen ${days}d ago`;
+      else timeStr = `Last seen ${new Date(otherUser.lastOnline).toLocaleDateString()}`;
+      statusEl.innerHTML = `<span style="opacity:0.6;">${timeStr}</span>`;
+    } else {
+      statusEl.innerHTML = '';
+    }
+  }
+  
+  // load conversation messages
+  let messages = getUserMessages().filter(m => 
+    (m.from === me.username && m.to === currentChatUser) || 
+    (m.from === currentChatUser && m.to === me.username)
+  ).sort((a, b) => a.time - b.time);
+
+  // mark incoming messages as read (seen) when this conversation is opened
+  messages.filter(m => m.to === me.username && !m.read).forEach(m => markMessageRead(m.id));
+
+  // refresh messages after marking as read
+  messages = getUserMessages().filter(m => 
+    (m.from === me.username && m.to === currentChatUser) || 
+    (m.from === currentChatUser && m.to === me.username)
+  ).sort((a, b) => a.time - b.time);
+
+  if (messagesEl) {
+    if (messages.length === 0) {
+      messagesEl.innerHTML = '<p style="opacity:0.6;text-align:center;">No messages yet. Say hi!</p>';
+    } else {
+      messagesEl.innerHTML = messages.map(m => {
+        const isMine = m.from === me.username;
+        const avatarUrl = getAvatar(isMine ? me.username : currentChatUser);
+        const initials = ((isMine ? me.username : currentChatUser)[0] || '?');
+
+        // SVG double-check (uses currentColor)
+        const checkSvg = `<svg viewBox="0 0 24 18" width="16" height="12" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M1.5 9.5L6.5 14.5L10.5 10.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.85"></path><path d="M7.5 9.5L12.5 14.5L21 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg>`;
+
+        // status (outgoing only)
+        let statusHtml = '';
+        if (isMine) {
+          if (m.read) {
+            const seenTime = m.seenAt ? new Date(m.seenAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+            statusHtml = `<span class="msg-status"><span class="msg-ticks seen">${checkSvg}</span><span class="msg-status-text">Seen ${seenTime}</span></span>`;
+          } else if (m.delivered) {
+            statusHtml = `<span class="msg-status"><span class="msg-ticks delivered">${checkSvg}</span><span class="msg-status-text">Delivered</span></span>`;
+          }
+        }
+
+        return `
+          <div style="display:flex;gap:8px;align-items:flex-end;${isMine ? 'flex-direction:row-reverse;' : ''}">
+            <div class="avatar-circle" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">
+              ${avatarUrl ? `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : initials}
+            </div>
+            <div style="max-width:85%;${isMine ? 'background:rgba(0,200,255,0.2);' : 'background:rgba(255,255,255,0.05);'}padding:8px 12px;border-radius:12px;">
+              <div style="font-size:12px;word-wrap:break-word;">${escapeHtml(m.content)}</div>
+              <div style="font-size:10px;opacity:0.5;text-align:right;margin-top:6px;display:flex;justify-content:flex-end;align-items:center;gap:8px;">
+                <span>${new Date(m.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
+                ${statusHtml}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+}
+
+function sendChatMessage() {
+  const input = document.getElementById('chatMessageInput');
+  const content = input ? input.value.trim() : '';
+  if (!content || !currentChatUser) return;
+  const me = getCurrentUser();
+  if (me && currentChatUser === me.username) { showToast('You cannot message yourself'); return; }
+  
+  sendUserMessage(currentChatUser, content);
+  input.value = '';
+  renderChatUserList();
+  renderChat();
 }
 
 function renderActivity() {
@@ -1100,6 +1511,145 @@ function deleteUser(username) {
   saveUsers(users); logActivity('user', `Deleted user ${username}`); renderUsers();
 }
 
+function editUser(username) {
+  const users = getUsers();
+  const u = users.find(x => x.username === username);
+  if (!u) return;
+  
+  const me = getCurrentUser();
+  const isOwner = me && me.role === 'owner';
+  
+  // Build edit modal HTML
+  const modalHtml = `
+    <div id="editUserModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;">
+      <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);backdrop-filter:blur(40px);"></div>
+      <div style="position:relative;z-index:10000;display:flex;align-items:center;justify-content:center;min-height:100%;padding:20px;">
+        <div class="admin-card" style="max-width:400px;width:100%;box-shadow:0 25px 80px rgba(0,0,0,0.9);animation:fadeUp 0.3s ease;">
+          <h2 style="margin-bottom:16px;">Edit User: ${escapeHtml(u.username)}</h2>
+          
+          <div class="field" style="margin-bottom:12px;">
+            <label>Username</label>
+            <input id="editUserName" type="text" value="${escapeHtml(u.username)}" ${!isOwner ? 'disabled' : ''} style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,200,255,0.2);background:rgba(0,20,40,0.9);color:white;">
+          </div>
+          
+          ${isOwner ? `
+          <div class="field" style="margin-bottom:12px;">
+            <label>Role</label>
+            <select id="editUserRole" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,200,255,0.2);background:rgba(0,20,40,0.9);color:white;">
+              <option value="viewer" ${u.role==='viewer'?'selected':''}>Viewer</option>
+              <option value="mod" ${u.role==='mod'?'selected':''}>Moderator</option>
+              <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+              <option value="owner" ${u.role==='owner'?'selected':''}>Owner</option>
+            </select>
+          </div>
+          
+          <div class="field" style="margin-bottom:12px;">
+            <label>New Password (leave blank to keep)</label>
+            <input id="editUserPassword" type="password" placeholder="New password" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,200,255,0.2);background:rgba(0,20,40,0.9);color:white;">
+          </div>
+          
+          <div style="margin-bottom:16px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="editUserActive" ${u.active ? 'checked' : ''} style="width:18px;height:18px;">
+              <span>Account Active</span>
+            </label>
+          </div>
+          
+          <div style="margin-bottom:16px;">
+            <button id="loginAsUser" type="button" class="btn btn-ghost" style="width:100%;">Login as this user</button>
+          </div>
+          ` : ''}
+          
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button id="saveEditUser" class="btn">Save Changes</button>
+            ${isOwner && username !== USERNAME ? `<button id="deleteEditUser" class="btn btn-ghost" style="color:#ff5c7a;">Delete User</button>` : ''}
+            <button id="closeEditUser" class="btn btn-ghost">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Remove existing modal if any
+  const existing = document.getElementById('editUserModal');
+  if (existing) existing.remove();
+  
+  // Add modal to body
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  
+  // Show modal
+  setTimeout(() => {
+    const modal = document.getElementById('editUserModal');
+    if (modal) modal.style.display = 'block';
+  }, 10);
+  
+  // Close handler
+  document.getElementById('closeEditUser').addEventListener('click', () => {
+    const modal = document.getElementById('editUserModal');
+    if (modal) modal.remove();
+  });
+  
+  // Save handler
+  document.getElementById('saveEditUser').addEventListener('click', () => {
+    const newName = document.getElementById('editUserName').value.trim();
+    if (!newName) {
+      showToast('Username cannot be empty');
+      return;
+    }
+    
+    const users = getUsers();
+    const idx = users.findIndex(x => x.username === username);
+    if (idx === -1) return;
+    
+    // Check for duplicate username
+    if (newName !== username && users.find(x => x.username.toLowerCase() === newName.toLowerCase())) {
+      showToast('Username already exists');
+      return;
+    }
+    
+    users[idx].username = newName;
+    
+    if (isOwner) {
+      users[idx].role = document.getElementById('editUserRole').value;
+      users[idx].active = document.getElementById('editUserActive').checked;
+      const newPass = document.getElementById('editUserPassword').value;
+      if (newPass) {
+        users[idx].passwordHash = hashPassword(newPass);
+      }
+    }
+    
+    saveUsers(users);
+    logActivity('user', `Edited user ${username} → ${newName}`);
+    showToast('User updated');
+    
+    const modal = document.getElementById('editUserModal');
+    if (modal) modal.remove();
+    renderUsers();
+  });
+  
+  // Delete handler
+  const deleteBtn = document.getElementById('deleteEditUser');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', () => {
+      if (confirm(`Delete user "${username}"? This cannot be undone.`)) {
+        deleteUser(username);
+        const modal = document.getElementById('editUserModal');
+        if (modal) modal.remove();
+      }
+    });
+  }
+  
+  // Login as user handler
+  const loginAsBtn = document.getElementById('loginAsUser');
+  if (loginAsBtn) {
+    loginAsBtn.addEventListener('click', () => {
+      if (confirm(`Login as ${username}? This will log you out from your current account.`)) {
+        loginAsUser(username);
+      }
+    });
+  }
+}
+
 function toggleUserActive(username) {
   if (username === USERNAME) return; // cannot disable built-in owner
   const users = getUsers(); const u = users.find(x => x.username === username); if (!u) return; u.active = !u.active; saveUsers(users); logActivity('user', `${u.active? 'Enabled':'Disabled'} ${username}`); renderUsers();
@@ -1174,30 +1724,51 @@ function showModal(message, callback) {
 }
 
 function showConfirm(message, onConfirm) {
-  const overlay = document.createElement('div');
-  overlay.id = 'customConfirm';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
-  
-  const box = document.createElement('div');
-  box.className = 'admin-card';
-  box.style.cssText = 'max-width:380px;width:100%;animation:fadeUp 0.3s ease;box-shadow:0 30px 100px rgba(0,0,0,0.9);';
-  box.innerHTML = `
-    <h2 style="margin-bottom:12px;">Confirm</h2>
-    <p class="contact-sub" style="margin-bottom:20px;">${message}</p>
-    <div style="display:flex;gap:10px;">
-      <button class="btn full-width btn-ghost" id="confirmCancel">Cancel</button>
-      <button class="btn full-width" id="confirmOk" style="background:#ef4444;">Confirm</button>
-    </div>
-  `;
-  
-  overlay.appendChild(box);
-  document.body.appendChild(overlay);
-  
-  document.getElementById('confirmCancel').onclick = () => overlay.remove();
-  document.getElementById('confirmOk').onclick = () => {
-    overlay.remove();
-    if (onConfirm) onConfirm();
-  };
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.id = 'customConfirm';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    
+    const box = document.createElement('div');
+    box.className = 'admin-card';
+    box.style.cssText = 'max-width:380px;width:100%;animation:fadeUp 0.3s ease;box-shadow:0 30px 100px rgba(0,0,0,0.9);';
+    box.innerHTML = `
+      <h2 style="margin-bottom:12px;">Confirm</h2>
+      <p class="contact-sub" style="margin-bottom:20px;">${message}</p>
+      <div style="display:flex;gap:10px;">
+        <button class="btn full-width btn-ghost" id="confirmCancel">Cancel</button>
+        <button class="btn full-width" id="confirmOk" style="background:#ef4444;">Confirm</button>
+      </div>
+    `;
+    
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    
+    const btnCancel = document.getElementById('confirmCancel');
+    const btnOk = document.getElementById('confirmOk');
+
+    const cleanup = () => {
+      document.removeEventListener('keydown', onKeyDown);
+      overlay.remove();
+    };
+
+    function done(result) {
+      try { if (onConfirm) onConfirm(result); } catch (err) { console.error('showConfirm callback error', err); }
+      resolve(result);
+    }
+
+    function onKeyDown(e) {
+      if (e.key === 'Escape') { done(false); cleanup(); }
+      if (e.key === 'Enter') { done(true); cleanup(); }
+    }
+
+    btnCancel.onclick = () => { done(false); cleanup(); };
+    btnOk.onclick = () => { done(true); cleanup(); };
+
+    // focus the confirm button for keyboard users
+    setTimeout(() => { try { btnOk.focus(); } catch (e) {} }, 0);
+    document.addEventListener('keydown', onKeyDown);
+  });
 }
 
 function showPrompt(title, message, placeholder, defaultValue, onSubmit) {
@@ -1302,11 +1873,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = authenticateUser(username, password);
       if (res && !res.error) {
         setCurrentUser(res.username);
+        // Update last online
+        const users = getUsers();
+        const userIdx = users.findIndex(u => u.username === res.username);
+        if (userIdx !== -1) {
+          users[userIdx].lastOnline = Date.now();
+          users[userIdx].isOnline = true;
+          saveUsers(users);
+        }
         if (loginStatus) { loginStatus.textContent = ''; }
         if (loginCard) loginCard.style.display = 'none';
         if (messagesPanel) messagesPanel.style.display = 'block';
         renderCurrentUser();
         renderUsers();
+        renderChatUserList();
         renderActivity();
         renderAnalytics();
         setView('inbox');
@@ -1403,6 +1983,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const password = document.getElementById('newPassword').value;
       const role = document.getElementById('newRole').value;
       const targetRank = userRoleRank(role);
+
+      // basic validation + uniqueness check
+      if (!username) { showToast('Enter a username'); return; }
+      const existing = getUsers().find(u => u.username.toLowerCase() === username.toLowerCase());
+      if (existing) { showToast('Username already exists'); return; }
       
       // If trying to create owner rank, require code verification FIRST
       if (role === 'owner') {
@@ -1604,6 +2189,9 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         toggleUserActive(uname); renderActivity();
+      }
+      if (act === 'editUser') {
+        editUser(uname);
       }
       if (act === 'deleteUser') {
         const targetUser = getUsers().find(u => u.username === uname);
@@ -1814,32 +2402,351 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (avatarForm) {
-    avatarForm.addEventListener('submit', e => {
+  // Username change form
+  const usernameForm = document.getElementById('usernameForm');
+  if (usernameForm) {
+    usernameForm.addEventListener('submit', e => {
       e.preventDefault();
       const me = getCurrentUser();
       if (!me) return;
-      const fileInput = document.getElementById('avatarFile');
-      const file = fileInput && fileInput.files[0];
+      const newUsernameInput = document.getElementById('profileNewUsername');
+      const newUsername = newUsernameInput ? newUsernameInput.value.trim() : '';
+      if (!newUsername) {
+        if (profileStatus) { profileStatus.textContent = 'Enter a username.'; profileStatus.style.color = '#ff7aa2'; }
+        return;
+      }
+      const users = getUsers();
+      const idx = users.findIndex(u => u.id === me.id);
+      if (idx === -1) return;
+      // Check if username already exists
+      if (users.find(u => u.username.toLowerCase() === newUsername.toLowerCase() && u.id !== me.id)) {
+        if (profileStatus) { profileStatus.textContent = 'Username already taken.'; profileStatus.style.color = '#ff7aa2'; }
+        return;
+      }
+      const oldUsername = me.username;
+      users[idx].username = newUsername;
+      saveUsers(users);
+      // Update current user session (use sessionStorage username string)
+      setCurrentUser(newUsername);
+      // Update avatar storage key if needed
+      const oldAvatars = JSON.parse(localStorage.getItem(STORAGE_KEY_AVATARS) || '{}');
+      if (oldAvatars[oldUsername]) {
+        oldAvatars[newUsername] = oldAvatars[oldUsername];
+        delete oldAvatars[oldUsername];
+        localStorage.setItem(STORAGE_KEY_AVATARS, JSON.stringify(oldAvatars));
+      }
+
+      // Update any stored user-to-user messages so history follows the new username
+      try {
+        const msgs = getUserMessages();
+        let msgsChanged = false;
+        msgs.forEach(m => {
+          if (m.from === oldUsername) { m.from = newUsername; msgsChanged = true; }
+          if (m.to === oldUsername) { m.to = newUsername; msgsChanged = true; }
+        });
+        if (msgsChanged) saveUserMessages(msgs);
+      } catch (e) { console.error('Failed updating messages for username change', e); }
+
+      // Update invites metadata (creator / usedBy)
+      try {
+        const invites = getInvites();
+        let invitesChanged = false;
+        invites.forEach(inv => {
+          if (inv.createdBy === oldUsername) { inv.createdBy = newUsername; invitesChanged = true; }
+          if (inv.usedBy === oldUsername) { inv.usedBy = newUsername; invitesChanged = true; }
+        });
+        if (invitesChanged) saveInvites(invites);
+      } catch (e) { console.error('Failed updating invites for username change', e); }
+
+      renderCurrentUser();
+      renderUsers();
+      renderChatUserList();
+      logActivity('user', `${oldUsername} changed username to ${newUsername}`);
+      if (profileStatus) { profileStatus.textContent = 'Username updated.'; profileStatus.style.color = '#6cffb2'; }
+      usernameForm.reset();
+    });
+  }
+
+  if (avatarForm) {
+    const avatarFileInput = document.getElementById('avatarFile');
+    const avatarPreviewModal = document.getElementById('avatarPreviewModal');
+    const avatarPreviewImg = document.getElementById('avatarPreviewImg');
+    const confirmAvatarBtn = document.getElementById('confirmAvatarBtn');
+    const cancelAvatarBtn = document.getElementById('cancelAvatarBtn');
+
+    // Show preview modal immediately when a file is chosen
+    if (avatarFileInput) {
+      avatarFileInput.addEventListener('change', (ev) => {
+        const file = ev.target.files && ev.target.files[0];
+        if (!file) return;
+        if (!file.type || !file.type.startsWith('image/')) {
+          if (profileStatus) { profileStatus.textContent = 'Please select an image file.'; profileStatus.style.color = '#ff7aa2'; }
+          avatarFileInput.value = '';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (avatarPreviewImg) avatarPreviewImg.src = reader.result;
+          if (avatarPreviewModal) avatarPreviewModal.style.display = 'block';
+          // disable confirm until preview is initialized
+          if (confirmAvatarBtn) confirmAvatarBtn.disabled = true;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Prevent default immediate save; require confirmation via modal
+    avatarForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const file = avatarFileInput && avatarFileInput.files[0];
       if (!file) {
         if (profileStatus) { profileStatus.textContent = 'Choose a picture first.'; profileStatus.style.color = '#ff7aa2'; }
         return;
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        setAvatar(me.username, reader.result);
-        renderCurrentUser();
-        logActivity('user', `${me.username} updated their avatar`);
-        if (profileStatus) { profileStatus.textContent = 'Profile picture updated.'; profileStatus.style.color = '#6cffb2'; }
+      // if user presses Save, show the preview modal (confirm flow)
+      if (avatarPreviewModal) avatarPreviewModal.style.display = 'block';
+      // ensure preview is initialized
+      initAvatarPreview && initAvatarPreview();
+    });
+
+    // Cancel preview
+    if (cancelAvatarBtn) {
+      cancelAvatarBtn.addEventListener('click', () => {
+        if (avatarPreviewModal) avatarPreviewModal.style.display = 'none';
+        if (avatarFileInput) avatarFileInput.value = '';
+        // reset zoom/translate state
+        previewState = null;
+      });
+    }
+
+    // Clear existing avatar (if any)
+    const clearAvatarBtn = document.getElementById('clearAvatarBtn');
+    if (clearAvatarBtn) {
+      clearAvatarBtn.addEventListener('click', async () => {
+        const me = getCurrentUser();
+        if (!me) return;
+        console.log('clearAvatarBtn clicked for', me.username);
+
+        try {
+          // await the site popup (acts like browser confirm)
+          const confirmed = await showConfirm('Remove profile picture', 'Remove your profile picture?');
+          console.log('clearAvatar: confirmed ->', confirmed);
+          if (!confirmed) return;
+
+          console.log('clearAvatar: avatars (before) ->', getAvatarMap());
+          const removed = removeAvatar(me.username);
+          console.log('clearAvatar: removed?', removed, 'avatars (after) ->', getAvatarMap());
+
+          // refresh UI
+          renderCurrentUser();
+          renderUsers();
+          renderChatUserList();
+          renderChat();
+          if (avatarFileInput) avatarFileInput.value = '';
+          if (profileStatus) { profileStatus.textContent = removed ? 'Profile picture removed.' : 'Failed to remove picture.'; profileStatus.style.color = removed ? '#ffb3b3' : '#ff7aa2'; }
+          logActivity('user', `${me.username} removed their avatar`);
+        } catch (err) {
+          console.error('clearAvatar handler error', err);
+          if (profileStatus) { profileStatus.textContent = 'Error removing avatar'; profileStatus.style.color = '#ff7aa2'; }
+        }
+      });
+    }
+
+    // --- Pan & zoom preview implementation ---
+    const avatarPreviewContainer = document.getElementById('avatarPreviewContainer');
+    const zoomRange = document.getElementById('avatarZoomRange');
+    let previewState = null; // { naturalW, naturalH, containerSize, baseScale, scale, translateX, translateY }
+
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+    function updatePreviewImage() {
+      if (!previewState || !avatarPreviewImg) return;
+      const s = previewState;
+      const displayW = s.naturalW * s.scale;
+      const displayH = s.naturalH * s.scale;
+      // clamp so image always covers the container
+      s.translateX = clamp(s.translateX, s.containerSize - displayW, 0);
+      s.translateY = clamp(s.translateY, s.containerSize - displayH, 0);
+      avatarPreviewImg.style.width = Math.round(displayW) + 'px';
+      avatarPreviewImg.style.height = Math.round(displayH) + 'px';
+      avatarPreviewImg.style.left = Math.round(s.translateX) + 'px';
+      avatarPreviewImg.style.top = Math.round(s.translateY) + 'px';
+    }
+
+    function initAvatarPreview() {
+      if (!avatarPreviewImg || !avatarPreviewContainer) return;
+      if (!avatarPreviewImg.src) return;
+      // wait for natural size
+      if (!avatarPreviewImg.naturalWidth) {
+        avatarPreviewImg.onload = () => initAvatarPreview();
+        return;
+      }
+      const naturalW = avatarPreviewImg.naturalWidth;
+      const naturalH = avatarPreviewImg.naturalHeight;
+      const containerSize = avatarPreviewContainer.clientWidth;
+      const baseScale = Math.max(containerSize / naturalW, containerSize / naturalH);
+      const displayW = naturalW * baseScale;
+      const displayH = naturalH * baseScale;
+      previewState = {
+        naturalW, naturalH, containerSize,
+        baseScale, scale: baseScale,
+        translateX: (containerSize - displayW) / 2,
+        translateY: (containerSize - displayH) / 2
       };
-      reader.readAsDataURL(file);
+      if (zoomRange) zoomRange.value = '1';
+      updatePreviewImage();
+      // enable confirm now preview is ready
+      if (confirmAvatarBtn) confirmAvatarBtn.disabled = false;
+    }
+
+    // pointer drag
+    let isDragging = false, dragStartX = 0, dragStartY = 0, dragStartTX = 0, dragStartTY = 0;
+    if (avatarPreviewContainer) {
+      avatarPreviewContainer.addEventListener('pointerdown', e => {
+        if (!previewState) return;
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        dragStartTX = previewState.translateX;
+        dragStartTY = previewState.translateY;
+        avatarPreviewImg.classList.add('dragging');
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        e.preventDefault();
+      });
+      avatarPreviewContainer.addEventListener('wheel', e => {
+        if (!previewState || !zoomRange) return;
+        e.preventDefault();
+        const delta = -e.deltaY;
+        let v = parseFloat(zoomRange.value || '1');
+        v += delta > 0 ? 0.04 : -0.04;
+        v = clamp(v, 1, 3);
+        zoomRange.value = v.toFixed(2);
+        onZoomInput();
+      }, { passive: false });
+    }
+
+    function onPointerMove(e) {
+      if (!isDragging || !previewState) return;
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+      previewState.translateX = dragStartTX + dx;
+      previewState.translateY = dragStartTY + dy;
+      updatePreviewImage();
+    }
+    function onPointerUp() {
+      isDragging = false;
+      if (avatarPreviewImg) avatarPreviewImg.classList.remove('dragging');
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    }
+
+    // zoom slider
+    if (zoomRange) {
+      zoomRange.addEventListener('input', onZoomInput);
+    }
+    function onZoomInput() {
+      if (!previewState || !zoomRange) return;
+      const prevScale = previewState.scale;
+      const mult = parseFloat(zoomRange.value || '1');
+      const newScale = previewState.baseScale * mult;
+      // keep center point stable
+      const containerCenterX = previewState.containerSize / 2;
+      const containerCenterY = previewState.containerSize / 2;
+      const prevDisplayW = previewState.naturalW * prevScale;
+      const prevDisplayH = previewState.naturalH * prevScale;
+      const centerRatioX = (containerCenterX - previewState.translateX) / prevDisplayW;
+      const centerRatioY = (containerCenterY - previewState.translateY) / prevDisplayH;
+      previewState.scale = newScale;
+      const newDisplayW = previewState.naturalW * previewState.scale;
+      const newDisplayH = previewState.naturalH * previewState.scale;
+      previewState.translateX = containerCenterX - centerRatioX * newDisplayW;
+      previewState.translateY = containerCenterY - centerRatioY * newDisplayH;
+      updatePreviewImage();
+    }
+
+    // Initialize when image changes
+    if (avatarPreviewImg) {
+      avatarPreviewImg.addEventListener('load', () => {
+        initAvatarPreview();
+      });
+    }
+
+    // Confirm preview: use current pan/zoom to crop and save
+    if (confirmAvatarBtn) {
+      confirmAvatarBtn.addEventListener('click', () => {
+        if (!avatarPreviewImg || !previewState) {
+          if (profileStatus) { profileStatus.textContent = 'Preview not ready yet.'; profileStatus.style.color = '#ff7aa2'; }
+          return;
+        }
+        try {
+          const s = previewState;
+          const imgEl = avatarPreviewImg;
+          const naturalW = imgEl.naturalWidth;
+          const naturalH = imgEl.naturalHeight;
+          // source rectangle in natural pixels
+          const srcX = clamp((-s.translateX) / s.scale, 0, naturalW);
+          const srcY = clamp((-s.translateY) / s.scale, 0, naturalH);
+          const srcSize = clamp(s.containerSize / s.scale, 0, Math.min(naturalW - srcX, naturalH - srcY));
+          const size = 256;
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(imgEl, srcX, srcY, srcSize, srcSize, 0, 0, size, size);
+          const dataUrl = canvas.toDataURL('image/png');
+          const me = getCurrentUser();
+          if (!me) { if (profileStatus) { profileStatus.textContent = 'Not signed in'; profileStatus.style.color = '#ff7aa2'; } return; }
+          setAvatar(me.username, dataUrl);
+          renderCurrentUser();
+          renderUsers();
+          logActivity('user', `${me.username} updated their avatar`);
+          if (profileStatus) { profileStatus.textContent = 'Profile picture updated.'; profileStatus.style.color = '#6cffb2'; }
+          if (avatarPreviewModal) avatarPreviewModal.style.display = 'none';
+          if (avatarFileInput) avatarFileInput.value = '';
+          previewState = null;
+        } catch (err) {
+          console.error('confirmAvatar error', err);
+          if (profileStatus) { profileStatus.textContent = 'Failed to update avatar'; profileStatus.style.color = '#ff7aa2'; }
+        }
+      });
+    }
+  }
+
+  // Chat functionality
+  const chatMsgInput = document.getElementById('chatMessageInput');
+  const sendChatBtn = document.getElementById('sendChatMsg');
+  if (chatMsgInput) {
+    chatMsgInput.addEventListener('keypress', e => {
+      if (e.key === 'Enter') sendChatMessage();
     });
   }
+  if (sendChatBtn) {
+    sendChatBtn.addEventListener('click', sendChatMessage);
+  }
+
+  // Initial chat render
+  renderChatUserList();
+  renderChat();
 
   // render on load
   renderUsers();
+  renderChatUserList();
+  renderChat();
   renderActivity();
   renderAnalytics();
+
+  // back button (focused chat view)
+  const chatBackBtn = document.getElementById('chatBackBtn');
+  if (chatBackBtn) {
+    chatBackBtn.addEventListener('click', () => {
+      currentChatUser = null;
+      const cs = document.getElementById('chatSection');
+      if (cs) cs.classList.remove('chat-open');
+      renderChatUserList();
+      renderChat();
+    });
+  }
 
   // render on load if already logged in
   if (messagesPanel && messagesPanel.style.display === 'block') renderMessages();
