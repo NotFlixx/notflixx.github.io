@@ -388,6 +388,14 @@ h2 {
 }
 
 /* ========== ADMIN / INBOX STYLES (improve aesthetics) ========== */
+.admin-page {
+  max-width: 100% !important;
+  width: 100%;
+  padding: 80px 10px 40px;
+  margin: 0;
+  text-align: left;
+}
+
 .admin-page .admin-grid {
   margin-top: 30px;
   display: flex;
@@ -411,10 +419,12 @@ h2 {
 .admin-messages {
   margin-top: 20px;
   /* increased to give chat & inbox more horizontal space */
-  max-width: 1400px;
+  max-width: 100%;
   margin-left: auto;
   margin-right: auto;
   text-align: left;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .admin-messages-header {
