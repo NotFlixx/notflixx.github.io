@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body style="display:flex;flex-direction:column;min-height:100vh;">
   <!-- Floating bubbles -->
   <div class="bubbles">
     <div class="bubble"></div>
@@ -83,17 +83,72 @@
     </div>
   </div>
 
+  <!-- Avatar preview / confirm modal -->
+  <div id="avatarPreviewModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:10001;">
+    <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);"></div>
+    <div style="position:relative;z-index:10002;display:flex;align-items:center;justify-content:center;height:100%;padding:20px;box-sizing:border-box;">
+      <div style="background:rgba(2,6,23,0.95);padding:18px;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.7);max-width:420px;width:100%;text-align:center;">
+        <h3 style="margin:0 0 12px;font-size:16px;">Preview profile picture</h3>
+        <div style="display:flex;justify-content:center;margin-bottom:8px;">
+          <div id="avatarPreviewContainer" class="avatar-preview-circle" style="width:220px;height:220px;border-radius:50%;overflow:hidden;border:1px solid rgba(255,255,255,0.04);box-shadow:inset 0 -6px 18px rgba(0,0,0,0.2);position:relative;">
+            <img id="avatarPreviewImg" src="" alt="preview" style="position:absolute;left:0;top:0;user-select:none;-webkit-user-drag:none;touch-action:none;">
+          </div>
+        </div>
+        <div class="avatar-preview-controls" style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:8px;">
+          <input id="avatarZoomRange" type="range" min="1" max="3" step="0.01" value="1" style="width:160px;">
+          <div style="font-size:12px;opacity:0.7;">Drag to reposition • Scroll or use the slider to zoom</div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button id="confirmAvatarBtn" class="btn">Confirm</button>
+          <button id="cancelAvatarBtn" class="btn btn-ghost">Cancel</button>
+        </div>
+        <p style="margin-top:10px;font-size:12px;opacity:0.7;">Image will be cropped and resized to a circular avatar (you can reposition/zoom before confirming).</p>
+      </div>
+    </div>
+  </div>
+
   <style>
+    .main-section { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    /* Allow admin page to be wider so chat has room */
+    .page.admin-page { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; max-width: 1400px; width: 100%; box-sizing: border-box; }
+
+    /* Chat-specific adjustments: narrower user list + reduced card padding for more message area */
+    #chatSection .users-panel { flex: 0 0 140px; max-width: 140px; min-width: 120px; transition: all .18s ease; }
+    #chatSection .card { padding: 14px; transition: all .18s ease; }
+    #chatSection #chatMessages { padding: 8px; gap: 8px; }
+
+    /* Default: when NO conversation is selected, show only the user list */
+    #chatSection:not(.chat-open) #chatCard { display: none; }
+    #chatSection:not(.chat-open) .users-panel { flex: 1 1 100%; max-width: none; }
+
+    /* Focused chat view: hide the user list and show the chat card */
+    #chatSection.chat-open .users-panel { display: none; }
+    #chatSection.chat-open #chatCard { display: flex; flex: 1 1 100%; width: 100%; }
+    #chatSection.chat-open #chatBackBtn { display: inline-flex; }
+
     @media (max-width: 480px) {
       #forgotPasswordModal .admin-card { padding: 20px !important; }
       #forgotPasswordModal input { font-size: 14px !important; padding: 12px !important; }
       #forgotPasswordModal h2 { font-size: 20px !important; }
+      /* hide users list on very small screens to prioritise chat */
+      #chatSection .users-panel { display: none; }
     }
   </style>
 
   <div id="messagesPanel" class="admin-messages" style="display:none;">
-    <div class="admin-messages-header">
-        <div class="inbox-controls" style="display:flex; gap:12px; align-items:center;">
+    <!-- Main Admin Tabs -->
+    <div class="admin-main-tabs" style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+      <button class="main-tab-btn active" data-main="messages">Inbox</button>
+      <button class="main-tab-btn" data-main="chat">Chat</button>
+      <button class="main-tab-btn" data-main="content">Content</button>
+      <button class="main-tab-btn" data-main="users">Users</button>
+      <button class="main-tab-btn" data-main="activity">Activity</button>
+      <button class="main-tab-btn" data-main="profile">Profile</button>
+    </div>
+
+    <!-- Messages Section -->
+    <div id="messagesSection" class="main-section">
+      <div class="admin-messages-header">
         <div class="inbox-tabs" role="tablist">
           <button class="tab active" data-view="inbox">Inbox <span class="tab-count" id="countInbox">0</span></button>
           <button class="tab" data-view="pinned">Pinned <span class="tab-count" id="countPinned">0</span></button>
@@ -102,156 +157,42 @@
           <button class="tab" data-view="all">All <span class="tab-count" id="countAll">0</span></button>
         </div>
       </div>
-
-      <div class="admin-userbox">
-        <div id="currentUserInfo" class="current-user">Not signed in</div>
-      </div>
-
-      <div class="inbox-actions">
+      <div class="inbox-actions" style="margin-top:12px;">
         <button id="clearMessages" class="btn small-btn">Clear Inbox</button>
-        <button id="contentBtn" class="btn small-btn">Content</button>
       </div>
+      <div id="messagesList" class="messages-list"></div>
     </div>
 
-    <div id="profilePanel" class="profile-panel">
-      <h3>Your profile</h3>
-      <p class="contact-sub" id="profileStatus">Update your password or avatar while logged in.</p>
-
-      <form id="passwordForm" class="user-form">
-        <div class="field">
-          <label for="currentPassword">Current password</label>
-          <input id="currentPassword" type="password" autocomplete="off" required />
-        </div>
-        <div class="field">
-          <label for="profileNewPassword">New password</label>
-          <input id="profileNewPassword" type="password" autocomplete="off" required />
-        </div>
-        <div class="field">
-          <label for="profileConfirmPassword">Confirm new password</label>
-          <input id="profileConfirmPassword" type="password" autocomplete="off" required />
-        </div>
-        <button class="btn small-btn" type="submit">Change password</button>
-      </form>
-
-      <form id="avatarForm" class="user-form" style="margin-top:16px;">
-        <div class="field">
-          <label for="avatarFile">Profile picture</label>
-          <input id="avatarFile" type="file" accept="image/*" />
-        </div>
-        <button class="btn small-btn" type="submit">Save picture</button>
-      </form>
-    </div>
-
-    <div id="adminTools" class="admin-tools">
-      <div class="analytics-cards">
-        <div class="analytic-card"><div class="analytic-number" id="statTotal">0</div><div class="analytic-label">Total</div></div>
-        <div class="analytic-card"><div class="analytic-number" id="statUnread">0</div><div class="analytic-label">Unread</div></div>
-        <div class="analytic-card"><div class="analytic-number" id="statPinned">0</div><div class="analytic-label">Pinned</div></div>
-        <div class="analytic-card"><div class="analytic-number" id="statArchived">0</div><div class="analytic-label">Archived</div></div>
-        <div class="analytic-card"><div class="analytic-number" id="statTrash">0</div><div class="analytic-label">Trash</div></div>
-      </div>
-
-      <div class="analytics-chart" id="statusChart"></div>
-
-      <div class="admin-tools-row">
-        <div class="users-panel card">
-          <h3>Users</h3>
-          <form id="createUserForm" class="user-form">
-            <div class="user-create-row" style="display:flex; gap:6px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
-              <input id="newUsername" placeholder="username" style="flex:1; min-width:100px;" required />
-              <input id="newPassword" type="password" placeholder="password" style="flex:1; min-width:100px;" required />
-              <select id="newRole" style="flex:1; min-width:90px;">
-                <option value="viewer">Viewer</option>
-                <option value="mod">Moderator</option>
-                <option value="admin">Admin</option>
-                <option value="owner">Owner</option>
-              </select>
-
-              <button class="btn" type="submit" style="flex:0 0 auto;">Create</button>
-            </div>
-          </form>
-          <div id="usersList" class="users-list"></div>
-        </div>
-
-        <div class="invites-panel card">
-          <h3>Invite Links</h3>
-          <form id="createInviteForm" class="user-form">
-            <div class="user-create-row" style="display:flex; gap:6px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
-              <select id="inviteRole" style="flex:1; min-width:120px;">
-                <option value="viewer">Viewer</option>
-                <option value="mod">Moderator</option>
-                <option value="admin">Admin</option>
-                <option value="owner">Owner</option>
-              </select>
-              <button class="btn" type="submit" style="flex:0 0 auto;">Generate Link</button>
-            </div>
-          </form>
-          <div id="invitesList" class="users-list"></div>
-        </div>
-
-        <div class="activity-panel card">
-          <h3>Activity log</h3>
-          <div id="activityLog" class="activity-log"></div>
-          <div style="margin-top:10px;"><button id="clearActivity" class="btn btn-ghost">Clear activity</button></div>
-        </div>
-      </div>
-    </div>
-
-    <div id="messagesList" class="messages-list">
-      <!-- Messages will be injected here -->
-    </div>
-  </div>
-
-  <div id="contentPanel" class="admin-messages" style="display:none;">
-    <div class="content-panel">
-      <div class="content-header">
-        <h2>Content Management</h2>
-        <button class="btn btn-ghost" onclick="setView('inbox')" style="margin-left: 20px;">← Back to Messages</button>
-      </div>
-
+    <!-- Content Section -->
+    <div id="contentSection" class="main-section" style="display:none;">
       <div class="content-tabs">
         <button class="tab-btn active" data-ctype="projects">Projects</button>
         <button class="tab-btn" data-ctype="skills">Skills</button>
         <button class="tab-btn" data-ctype="categories">Categories</button>
       </div>
-
       <div id="projectsContent" class="content-section">
         <div class="content-form">
           <h3>Add New Project</h3>
           <form id="addProjectForm">
-            <div class="form-row" style="flex-wrap:wrap;">
-              <input id="projTitle" placeholder="Project title" style="flex:1 1 200px; min-width:150px;" required />
-              <select id="projCategory" style="flex:1 1 120px; min-width:100px;">
+            <div class="form-row">
+              <input id="projTitle" placeholder="Project title" required />
+              <select id="projCategory">
                 <option value="games">Games</option>
                 <option value="servers">Servers</option>
                 <option value="staff">Staff</option>
               </select>
             </div>
-            <textarea id="projDesc" placeholder="Description" rows="2" style="margin-bottom:8px;"></textarea>
-            <div class="form-row" style="flex-wrap:wrap;">
-              <input id="projTags" placeholder="Tags (comma separated)" style="flex:1 1 150px;" />
-              <input id="projLink" placeholder="Project link" style="flex:1 1 150px;" />
-            </div>
-            <div class="form-row" id="staffStatusRow" style="display: none; flex-wrap:wrap;">
-              <select id="projStaffStatus" style="flex:1 1 150px;">
-                <option value="">Staff Status (optional)</option>
-                <option value="active">Active</option>
-                <option value="demoted">Demoted</option>
-                <option value="quit">Quit</option>
-              </select>
-              <span style="font-size: 12px; opacity: 0.7; align-self: center;">Staff status</span>
-            </div>
-            <div class="form-row" style="flex-wrap:wrap;">
-              <input id="projBanner" type="file" accept="image/*" style="flex:1 1 200px;" />
-              <span style="font-size: 12px; opacity: 0.7; align-self: center;">Banner (optional)</span>
+            <textarea id="projDesc" placeholder="Description" rows="2"></textarea>
+            <div class="form-row">
+              <input id="projTags" placeholder="Tags (comma separated)" />
+              <input id="projLink" placeholder="Project link" />
             </div>
             <button class="btn" type="submit">Add Project</button>
           </form>
         </div>
-        <h4 style="margin-bottom: 16px; color: rgba(255,255,255,0.7);">Existing Projects</h4>
+        <h4 style="margin-bottom:16px;color:rgba(255,255,255,0.7);">Existing Projects</h4>
         <div id="projectsList" class="content-items"></div>
       </div>
-
       <div id="skillsContent" class="content-section" style="display:none;">
         <div class="content-form">
           <h3>Add New Skill</h3>
@@ -263,23 +204,159 @@
             <button class="btn" type="submit">Add Skill</button>
           </form>
         </div>
-        <h4 style="margin-bottom: 16px; color: rgba(255,255,255,0.7);">Existing Skills</h4>
+        <h4 style="margin-bottom:16px;color:rgba(255,255,255,0.7);">Existing Skills</h4>
         <div id="skillsList" class="content-items"></div>
       </div>
-
       <div id="categoriesContent" class="content-section" style="display:none;">
         <div class="content-form">
           <h3>Add New Category</h3>
           <form id="addCategoryForm">
-            <input id="categoryName" placeholder="Category name (e.g. YouTube, Twitch)" required />
+            <input id="categoryName" placeholder="Category name" required />
             <button class="btn" type="submit">Add Category</button>
           </form>
         </div>
-        <h4 style="margin-bottom: 16px; color: rgba(255,255,255,0.7);">Existing Categories</h4>
+        <h4 style="margin-bottom:16px;color:rgba(255,255,255,0.7);">Existing Categories</h4>
         <div id="categoriesList" class="content-items"></div>
       </div>
     </div>
-  </div>
+
+    <!-- Users Section -->
+    <div id="usersSection" class="main-section" style="display:none;">
+      <div class="admin-tools-row">
+        <div class="users-panel card">
+          <h3>Users</h3>
+          <form id="createUserForm" class="user-form">
+            <div class="user-create-row" style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+              <input id="newUsername" placeholder="username" style="flex:1;min-width:100px;" required />
+              <input id="newPassword" type="password" placeholder="password" style="flex:1;min-width:100px;" required />
+              <select id="newRole" style="flex:1;min-width:90px;">
+                <option value="viewer">Viewer</option>
+                <option value="mod">Moderator</option>
+                <option value="admin">Admin</option>
+                <option value="owner">Owner</option>
+              </select>
+              <button class="btn" type="submit" style="flex:0 0 auto;">Create</button>
+            </div>
+          </form>
+          <div id="usersList" class="users-list"></div>
+        </div>
+        <div class="invites-panel card">
+          <h3>Invite Links</h3>
+          <form id="createInviteForm" class="user-form">
+            <div class="user-create-row" style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+              <select id="inviteRole" style="flex:1;min-width:120px;">
+                <option value="viewer">Viewer</option>
+                <option value="mod">Moderator</option>
+                <option value="admin">Admin</option>
+                <option value="owner">Owner</option>
+              </select>
+              <button class="btn" type="submit" style="flex:0 0 auto;">Generate Link</button>
+            </div>
+          </form>
+          <div id="invitesList" class="users-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat / Direct Messages Section -->
+    <div id="chatSection" style="display:none;padding:0 20px 20px 20px;">
+      <div style="display:flex;gap:12px;height:500px;">
+        <div class="users-panel card" style="width:150px;flex-shrink:0;overflow-y:auto;height:100%;">
+          <h3 style="font-size:13px;margin:0 0 8px 0;">Users</h3>
+          <div id="chatUserList"></div>
+        </div>
+        <div id="chatCard" class="card" style="flex:1;flex-direction:column;height:100%;">
+          <div style="padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:6px;display:flex;align-items:center;gap:8px;">
+            <button id="chatBackBtn" class="btn small-btn" style="display:none;padding:6px 8px;min-width:36px;">←</button>
+            <div style="flex:1;">
+              <div id="chatWithUser" style="font-size:13px;font-weight:600;">Select user</div>
+              <div id="chatUserStatus" style="font-size:10px;opacity:0.5;"></div>
+            </div>
+          </div>
+          <div id="chatMessages" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:8px;"></div>
+          <div id="chatInputArea" style="margin-top:6px;display:flex;gap:6px;">
+            <input id="chatMessageInput" type="text" placeholder="Message..." style="flex:1;padding:10px 12px;border-radius:8px;border:1px solid rgba(0,200,255,0.2);background:rgba(0,20,40,0.9);color:white;font-size:13px;" />
+            <button id="sendChatMsg" class="btn" style="padding:6px 10px;font-size:12px;">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Section -->
+    <div id="activitySection" class="main-section" style="display:none;">
+      <div class="analytics-cards">
+        <div class="analytic-card"><div class="analytic-number" id="statTotal">0</div><div class="analytic-label">Total</div></div>
+        <div class="analytic-card"><div class="analytic-number" id="statUnread">0</div><div class="analytic-label">Unread</div></div>
+        <div class="analytic-card"><div class="analytic-number" id="statPinned">0</div><div class="analytic-label">Pinned</div></div>
+        <div class="analytic-card"><div class="analytic-number" id="statArchived">0</div><div class="analytic-label">Archived</div></div>
+        <div class="analytic-card"><div class="analytic-number" id="statTrash">0</div><div class="analytic-label">Trash</div></div>
+      </div>
+      <div class="analytics-chart" id="statusChart"></div>
+      <div class="activity-panel card" style="margin-top:20px;">
+        <h3>Activity log</h3>
+        <div id="activityLog" class="activity-log"></div>
+        <div style="margin-top:10px;"><button id="clearActivity" class="btn btn-ghost">Clear activity</button></div>
+      </div>
+    </div>
+
+    <!-- Profile Section -->
+    <div id="profileSection" class="main-section" style="display:none;">
+      <div id="currentUserInfo" class="current-user" style="margin-bottom:20px;">Not signed in</div>
+      <div id="profilePanel" class="admin-card profile-card" style="max-width:680px;">
+        <div class="profile-top">
+          <div id="profileAvatarDisplay" class="profile-avatar user-avatar user-avatar--lg" aria-hidden="true"></div>
+          <div class="profile-info">
+            <div class="profile-name-row">
+              <div class="profile-name"><span id="profileDisplayName">Not signed in</span> <span id="profileRole" class="role-badge" style="margin-left:8px;opacity:0.95;"></span></div>
+              <div class="profile-extra"><span id="youBadge" class="you-badge" style="display:none;">You</span></div>
+            </div>
+            <p class="contact-sub" id="profileStatus">Update your profile info while logged in.</p>
+          </div>
+        </div>
+
+        <div class="profile-forms">
+          <form id="usernameForm" class="user-form">
+            <div class="field">
+              <label for="profileNewUsername">Username</label>
+              <input id="profileNewUsername" type="text" autocomplete="off" placeholder="Enter new username" required />
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn small-btn" type="submit">Change Username</button>
+            </div>
+          </form>
+
+          <form id="avatarForm" class="user-form">
+            <div class="field">
+              <label for="avatarFile">Profile picture</label>
+              <input id="avatarFile" type="file" accept="image/*" />
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn small-btn" type="submit">Save picture</button>
+              <button id="clearAvatarBtn" type="button" class="btn btn-ghost small-btn" style="display:none;">Clear</button>
+            </div>
+          </form>
+        </div>
+
+        <div style="margin-top:14px;">
+          <form id="passwordForm" class="user-form">
+            <h4 style="margin-bottom:10px;color:rgba(255,255,255,0.6);">Change Password</h4>
+            <div class="field">
+              <label for="currentPassword">Current password</label>
+              <input id="currentPassword" type="password" autocomplete="off" required />
+            </div>
+            <div class="field">
+              <label for="profileNewPassword">New password</label>
+              <input id="profileNewPassword" type="password" autocomplete="off" required />
+            </div>
+            <div class="field">
+              <label for="profileConfirmPassword">Confirm new password</label>
+              <input id="profileConfirmPassword" type="password" autocomplete="off" required />
+            </div>
+            <button class="btn small-btn" type="submit">Change password</button>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -287,7 +364,61 @@
   © 2026 <a href="admin.html" style="color: inherit; text-decoration: none;">NotFlixx</a> — Admin
 </footer>
 
+<style>
+  .main-tab-btn {
+    padding: 10px 20px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+  .main-tab-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+  }
+  .main-tab-btn.active {
+    background: linear-gradient(135deg, #00d4ff, #00ff88);
+    color: #0a1628;
+    border-color: transparent;
+  }
+</style>
+
 <script src="admin.js"></script>
+<script>
+  // Main tab navigation
+  document.addEventListener('DOMContentLoaded', function() {
+    const mainTabBtns = document.querySelectorAll('.main-tab-btn');
+    
+    mainTabBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const tab = this.dataset.main;
+        
+        // Update active button
+        mainTabBtns.forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        // Hide all main sections
+        const sections = ['messagesSection', 'chatSection', 'contentSection', 'usersSection', 'activitySection', 'profileSection'];
+        sections.forEach(s => {
+          const el = document.getElementById(s);
+          if (el) el.style.display = 'none';
+        });
+        
+        // Also hide contentPanel if it exists
+        const cp = document.getElementById('contentPanel');
+        if (cp) cp.style.display = 'none';
+        
+        // Show selected section
+        const sel = document.getElementById(tab + 'Section');
+        if (sel) sel.style.display = 'block';
+      });
+    });
+  });
+</script>
 </body>
 </html>
 
