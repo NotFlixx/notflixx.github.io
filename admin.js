@@ -8,6 +8,7 @@ const STORAGE_KEY_AVATARS = 'notflixx_avatars';
 const STORAGE_KEY_CONTENT = 'notflixx_content';
 const STORAGE_KEY_PROJECT_IMAGES = 'notflixx_project_images';
 const STORAGE_KEY_CATEGORIES = 'notflixx_categories';
+const STORAGE_KEY_STATS = 'notflixx_stats';
 const STORAGE_KEY_INVITES = 'notflixx_invites';
 const STORAGE_KEY_USER_MESSAGES = 'notflixx_user_messages';
 
@@ -267,6 +268,32 @@ const DEFAULT_CATEGORIES = [
   { id: 'servers', name: 'Servers', icon: '🖥️' },
   { id: 'staff', name: 'Staff', icon: '👥' }
 ];
+
+const DEFAULT_STATS = {
+  projects: 28,
+  clients: 12,
+  years: 3
+};
+
+function getStats() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_STATS);
+    if (raw) return JSON.parse(raw);
+    return DEFAULT_STATS;
+  } catch { return DEFAULT_STATS; }
+}
+
+function saveStats(stats) {
+  localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(stats));
+}
+
+function updateStat(key, value) {
+  const stats = getStats();
+  stats[key] = parseInt(value) || 0;
+  saveStats(stats);
+  renderContentPanel();
+  logActivity('content', `Updated ${key} to ${stats[key]}`);
+}
 
 function getCategories() {
   try {
@@ -1461,6 +1488,36 @@ function renderContentPanel() {
       `).join('');
     }
   }
+
+  // Render stats
+  const stats = getStats();
+  const statProjects = document.getElementById('statProjects');
+  const statClients = document.getElementById('statClients');
+  const statYears = document.getElementById('statYears');
+  if (statProjects) statProjects.value = stats.projects;
+  if (statClients) statClients.value = stats.clients;
+  if (statYears) statYears.value = stats.years;
+
+  const statsPreview = document.getElementById('statsPreview');
+  if (statsPreview) {
+    statsPreview.innerHTML = `
+      <h4 style="margin-bottom:16px;color:rgba(255,255,255,0.7);">Preview</h4>
+      <div class="content-item" style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;">
+        <div style="text-align:center;padding:16px;background:rgba(255,255,255,0.03);border-radius:12px;min-width:100px;">
+          <div style="font-size:32px;font-weight:bold;background:linear-gradient(90deg,#a855f7,#6366f1);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">${stats.projects}</div>
+          <div style="font-size:14px;opacity:0.7;">Projects</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:rgba(255,255,255,0.03);border-radius:12px;min-width:100px;">
+          <div style="font-size:32px;font-weight:bold;background:linear-gradient(90deg,#a855f7,#6366f1);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">${stats.clients}</div>
+          <div style="font-size:14px;opacity:0.7;">Clients</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:rgba(255,255,255,0.03);border-radius:12px;min-width:100px;">
+          <div style="font-size:32px;font-weight:bold;background:linear-gradient(90deg,#a855f7,#6366f1);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">${stats.years}</div>
+          <div style="font-size:14px;opacity:0.7;">Years</div>
+        </div>
+      </div>
+    `;
+  }
 }
 
 function renderAnalytics() {
@@ -1936,7 +1993,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (clearBtn) clearBtn.addEventListener('click', () => {
-    if (!canPerform('delete')) { showToast('Insufficient permissions'); return; }
+    if (!canPerform('moderate')) { showToast('Insufficient permissions'); return; }
     clearCurrentView(); logActivity('messages', 'Cleared current view'); renderAnalytics();
   });
 
@@ -2252,6 +2309,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('projectsContent').style.display = ctype === 'projects' ? 'block' : 'none';
       document.getElementById('skillsContent').style.display = ctype === 'skills' ? 'block' : 'none';
       document.getElementById('categoriesContent').style.display = ctype === 'categories' ? 'block' : 'none';
+      document.getElementById('statsContent').style.display = ctype === 'stats' ? 'block' : 'none';
     });
   });
 
@@ -2343,6 +2401,24 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         showToast('Category already exists!');
       }
+    });
+  }
+
+  // Edit stats form
+  const editStatsForm = document.getElementById('editStatsForm');
+  if (editStatsForm) {
+    editStatsForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const me = getCurrentUser();
+      if (!me || me.role !== 'owner') { showToast('Only owners can manage content'); return; }
+      const projects = document.getElementById('statProjects').value;
+      const clients = document.getElementById('statClients').value;
+      const years = document.getElementById('statYears').value;
+      const stats = { projects: parseInt(projects) || 0, clients: parseInt(clients) || 0, years: parseInt(years) || 0 };
+      saveStats(stats);
+      renderContentPanel();
+      logActivity('content', `Updated stats: ${stats.projects} projects, ${stats.clients} clients, ${stats.years} years`);
+      showToast('Stats updated successfully!');
     });
   }
 
