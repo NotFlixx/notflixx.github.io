@@ -410,7 +410,8 @@ h2 {
 /* Messages / Inbox */
 .admin-messages {
   margin-top: 20px;
-  max-width: 980px;
+  /* increased to give chat & inbox more horizontal space */
+  max-width: 1400px;
   margin-left: auto;
   margin-right: auto;
   text-align: left;
@@ -469,6 +470,39 @@ h2 {
   box-shadow:0 0 0 1px rgba(150,100,200,0.5), 0 4px 12px rgba(168,85,247,0.3);
 }
 .avatar-circle img { width:100%; height:100%; object-fit:cover; display:block; }
+
+/* User avatar (used in user lists, profile previews) */
+.user-avatar {
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  overflow:hidden;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,#a855f7,#6366f1);
+  color:white;
+  font-weight:600;
+  font-size:13px;
+  flex-shrink:0;
+}
+.user-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+
+/* larger variant */
+.user-avatar.user-avatar--lg {
+  width:64px;
+  height:64px;
+  font-size:18px;
+}
+
+/* ensure edit-modal / preview images are constrained */
+.edit-modal img, .avatar-preview-circle img { max-width:none; height:auto; display:block; }
+.avatar-preview-circle { position: relative; overflow: hidden; }
+.avatar-preview-circle img { position: absolute; left: 0; top: 0; will-change: transform; cursor: grab; user-select: none; }
+.avatar-preview-circle img.dragging { cursor: grabbing; }
+.avatar-preview-controls { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.avatar-preview-controls input[type="range"] { -webkit-appearance: none; appearance: none; height:6px; background: rgba(255,255,255,0.04); border-radius:999px; }
+.avatar-preview-controls input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width:14px; height:14px; border-radius:50%; background: linear-gradient(90deg,#a855f7,#6366f1); box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
 .current-user-name { font-weight:600; font-size:14px; }
 .current-user-perms { font-size:11px; opacity:0.8; }
 .current-user-actions { display:flex; gap:6px; }
@@ -492,30 +526,97 @@ h2 {
 .status-fill { height:100%; transition:width .6s ease; }
 .status-labels { display:flex; gap:12px; margin-left:12px; font-size:12px; color:rgba(255,255,255,0.8); }
 
-.admin-tools-row { display:flex; gap:14px; align-items:flex-start; }
-.users-panel { flex:1 1 480px; padding:14px; }
-.activity-panel { width:300px; padding:14px; }
-.users-list { margin-top:10px; display:flex; flex-direction:column; gap:6px; }
+.admin-tools-row { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+.users-panel { flex:1 1 280px; padding:14px; max-width:350px; }
+
+/* Themed scrollbars for chat & lists (WebKit + Firefox) */
+#chatMessages, .users-panel, .messages-list, .users-list, .activity-log {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(99,102,241,0.6) rgba(10,10,20,0.25);
+}
+
+/* WebKit scrollbars */
+#chatMessages::-webkit-scrollbar,
+.users-panel::-webkit-scrollbar,
+.messages-list::-webkit-scrollbar,
+.users-list::-webkit-scrollbar,
+.activity-log::-webkit-scrollbar {
+  width: 10px;
+}
+
+#chatMessages::-webkit-scrollbar-track,
+.users-panel::-webkit-scrollbar-track,
+.messages-list::-webkit-scrollbar-track,
+.users-list::-webkit-scrollbar-track,
+.activity-log::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, rgba(5,5,20,0.4), rgba(10,10,30,0.35));
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+#chatMessages::-webkit-scrollbar-thumb,
+.users-panel::-webkit-scrollbar-thumb,
+.messages-list::-webkit-scrollbar-thumb,
+.users-list::-webkit-scrollbar-thumb,
+.activity-log::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(99,102,241,0.6), rgba(168,85,247,0.6));
+  border-radius: 10px;
+  border: 2px solid rgba(6,6,20,0.45);
+  box-shadow: 0 0 10px rgba(99,102,241,0.06), inset 0 1px 0 rgba(255,255,255,0.03);
+  transition: background-color 180ms ease, transform 160ms ease;
+}
+
+#chatMessages::-webkit-scrollbar-thumb:hover,
+.users-panel::-webkit-scrollbar-thumb:hover,
+.messages-list::-webkit-scrollbar-thumb:hover,
+.users-list::-webkit-scrollbar-thumb:hover,
+.activity-log::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(99,102,241,0.85), rgba(168,85,247,0.85));
+  transform: translateX(0);
+}
+
+/* message delivery/seen status styling */
+.msg-status { display:inline-flex; align-items:center; gap:8px; margin-left:8px; }
+.msg-status-text { font-size:11px; opacity:0.85; color:rgba(255,255,255,0.65); transition: color .22s ease, opacity .22s ease; }
+
+/* SVG checks use currentColor so color transitions work */
+.msg-ticks svg { width:16px; height:12px; display:inline-block; vertical-align:middle; color: rgba(255,255,255,0.55); transition: color .26s ease, transform .26s cubic-bezier(.2,.9,.2,1), opacity .26s ease; }
+.msg-ticks.delivered svg { color: rgba(255,255,255,0.55); opacity:0.95; transform: none; }
+.msg-ticks.seen svg { color: #3b82f6; transform: scale(1.06); animation: tickPulse .36s ease; }
+.msg-status .msg-ticks.seen ~ .msg-status-text { color: #cfe3ff; opacity:0.95; }
+
+@keyframes tickPulse {
+  0% { transform: scale(0.9); opacity:0.7; }
+  60% { transform: scale(1.12); opacity:1; }
+  100% { transform: scale(1.06); opacity:1; }
+}
+
+.activity-panel { width:280px; padding:14px; flex-grow:0; }
+.invites-panel { flex:1 1 280px; padding:14px; max-width:350px; }
+.users-list { margin-top:10px; display:flex; flex-direction:column; gap:10px; }
+
+/* Empty placeholder to preserve panel height (keeps Invite panel beside Users) */
+.empty-placeholder { min-height:260px; display:flex; align-items:center; justify-content:center; border-radius:8px; background: rgba(255,255,255,0.01); box-shadow: inset 0 1px 0 rgba(255,255,255,0.01); color: rgba(255,255,255,0.6); }
 .user-row {
   display:flex;
-  gap:8px;
+  gap:12px;
   align-items:center;
   justify-content:space-between;
-  padding:8px 10px;
-  border-radius:8px;
+  padding:10px 12px;
+  border-radius:10px;
   background:rgba(6,10,28,0.9);
   border:1px solid rgba(255,255,255,0.02);
   flex-wrap: wrap;
 }
-.user-meta { display:flex; gap:6px; align-items:center; }
-.role-badge { padding:3px 6px; border-radius:999px; background:rgba(255,255,255,0.02); font-size:11px; }
+.user-meta { display:flex; gap:10px; align-items:center; }
+.role-badge { padding:4px 8px; border-radius:999px; background:rgba(255,255,255,0.02); font-size:12px; }
 .user-actions button {
-  margin-left:4px;
-  padding:4px 8px;
-  border-radius:6px;
-  font-size:11px;
+  margin-left:6px;
+  padding:6px 10px;
+  border-radius:8px;
+  font-size:12px;
 }
-.activity-log { max-height:180px; overflow:auto; display:flex; flex-direction:column; gap:6px; }
+.activity-log { max-height:180px; overflow:auto; display:flex; flex-direction:column; gap:8px; }
 .activity-entry { font-size:13px; padding:8px; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.02); }
 
 .profile-panel {
@@ -533,34 +634,48 @@ h2 {
 
 /* profile + user forms */
 .user-form {
-  margin-top:6px;
+  margin-top:10px;
 }
 .user-form .field {
-  margin-bottom:8px;
+  margin-bottom:12px;
 }
 .user-form input,
 .user-form select {
   width:100%;
-  padding:6px 8px;
-  border-radius:6px;
+  padding:10px 12px;
+  border-radius:8px;
   border:1px solid rgba(0,200,255,0.15);
-  background:rgba(0,20,40,0.8);
+  background:rgba(0,20,40,0.85);
   color:inherit;
-  font-size:12px;
-  transition: all 0.3s ease;
+  font-size:13px;
+  transition: all 0.18s ease;
 }
 .user-form input:focus,
 .user-form select:focus {
   outline:none;
-  border-color:rgba(0,200,255,0.6);
-  box-shadow:0 0 0 1px rgba(0,200,255,0.4), 0 2px 8px rgba(0,200,255,0.1);
+  border-color:rgba(0,200,255,0.7);
+  box-shadow:0 0 0 2px rgba(0,200,255,0.25), 0 6px 20px rgba(0,200,255,0.06);
 }
 .profile-panel .btn.small-btn {
-  margin-top:10px;
+  margin-top:12px;
   width:auto;
   padding-inline:18px;
   box-shadow:none;
 }
+
+/* Neater profile card layout */
+#profilePanel.profile-card { padding:18px; border-radius:12px; }
+#profilePanel .profile-top { display:flex; gap:18px; align-items:center; margin-bottom:18px; }
+#profilePanel .profile-avatar { width:72px; height:72px; border-radius:50%; overflow:hidden; background:linear-gradient(135deg,#a855f7,#6366f1); display:flex; align-items:center; justify-content:center; font-weight:700; color:white; font-size:20px; box-shadow: 0 8px 30px rgba(2,6,23,0.45); }
+#profilePanel .profile-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+#profilePanel .profile-name-row { display:flex; gap:14px; align-items:center; justify-content:space-between; }
+#profilePanel .profile-name { font-size:16px; font-weight:700; display:flex; gap:8px; align-items:center; }
+#profilePanel .you-badge { padding:6px 10px; border-radius:999px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); font-size:12px; opacity:0.95; }
+#profilePanel .profile-forms { display:grid; grid-template-columns: 1fr 1fr; gap:16px; align-items:start; margin-top:12px; }
+#profilePanel .profile-forms .user-form { margin-top:0; }
+#profilePanel .profile-forms .user-form .field label { font-size:13px; opacity:0.9; }
+#profilePanel .contact-sub { margin-top:10px; }
+@media (max-width:880px) { #profilePanel .profile-forms { grid-template-columns: 1fr; } }
 
 @media (max-width:900px) {
   .admin-tools-row { flex-direction:column; }
